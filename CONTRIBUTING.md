@@ -42,6 +42,6 @@ Before committing or publishing:
 2. Verify ignored paths with `git check-ignore -v config/.env .venv reports/Navidrome/Latest.md state/navidrome-last.json Nyx_Starter_v0.1.zip`.
 3. Scan working files, staged content, archives, and reachable Git history with a trusted scanner or a redacted local audit. Pattern scans have false positives and cannot prove absence of secrets. Never echo matched values.
 4. Inspect staged content for private data. Ignore rules do not remove already tracked files or historical secrets.
-5. If any secret is detected, stop publication and tell the owner its location/category only. Do not silently rotate credentials, delete files, or rewrite history; obtain direction before continuing.
+5. Ignored, untracked local credentials are explicitly permitted. If a credential is exposed in tracked history or material intended for publication, stop publication and tell the owner its location/category only. Do not silently rotate credentials, delete files, or rewrite history; obtain direction before continuing.
 
 Environments, archives, music, reports, logs, snapshots, state, and binaries remain local. Preserve working credentials and generated output. If a credential was actually shared or committed, the owner must revoke/rotate it; history cleanup alone is insufficient. Confirm repository ownership and purpose before setting `origin` or pushing. Never overwrite unrelated work or force-push without authorization.

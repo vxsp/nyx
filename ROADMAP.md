@@ -1,96 +1,81 @@
 # Nyx roadmap
 
-## Purpose and decisions
+The owner's autonomous directive authorizes verified development increments, commits, and pushes to public `vxsp/nyx`. Preserve working code and existing history. Native Windows 11, Intel i3-1115G4, 16 GB RAM; no WSL/Docker requirement. Rust owns the future engine and performance-sensitive work; Python owns integrations, analysis, reports, and the initial Textual TUI. Keep dependencies and resource use low.
 
-Nyx is a personal native Windows 11 idle automation system for an Intel i3-1115G4 laptop with 16 GB RAM. Rust is intended for the background engine and performance-sensitive work; Python is intended for API integrations, analysis, and reports. No WSL or Docker requirement, minimal dependencies, low resource use, and preservation of working code are permanent constraints unless the owner changes them.
+This file is the primary task queue. Read it with `AGENTS.md`, `ARCHITECTURE.md`, `README.md`, `CONTRIBUTING.md`, and `docs/DEVELOPMENT_LOG.md`. Update them with relevant implementation changes. Record evidence and blockers; never present plans as completed. No delivery dates are promised.
 
-Music operations are read-only by default. An analysis finding is never permission to move, rename, retag, deduplicate, or delete files. Destructive operations require approval. No new resident service or open-source license should be added incidentally.
+## Baseline and reference measurements
 
-Use this roadmap with `AGENTS.md` for persistent instructions and `ARCHITECTURE.md` for actual implementation. The sequence below reflects the owner's priorities; it is not a claim that later modules exist or authorization to implement every item now. No delivery dates have been committed.
+Implemented: read-only Navidrome reporting, metadata diagnostics, duplicate candidates, previous-snapshot comparison, Markdown reports/JSON state, Python admission checks, one-shot Rust launcher source, and PowerShell setup/task helpers. There are 15 passing offline Python tests. Rust compilation and Windows idle/AC scheduling are unverified.
 
-## Inspected baseline
+Owner-reported first run at `https://vxsp.pikapod.net`: 1,736 tracks, 398 albums, 214 artists, 12 playlists, 5.97 GiB indexed sizes; 1,253 M4A, 476 MP3, 4 FLAC, 3 WAV; 1,006 missing track numbers, 20 missing artwork references, 3 duplicate candidate groups; collection took 46 seconds. These approved aggregates are historical observations, never hardcoded live results or test expectations. Detailed reports and snapshots stay private.
 
-| Area | Status and evidence |
-| --- | --- |
-| Navidrome reporter | Working Python module; read-only HTTPS collection, diagnostics, Markdown output, previous-snapshot comparison |
-| First successful report | Owner-reported: 1,736 tracks, 398 albums, 214 artists, 12 playlists at `https://vxsp.pikapod.net`; historical context, not freshly queried |
-| Python admission checks | Implemented: enabled flag, cooldown, battery/RAM/CPU prechecks for `run`; manual `report` bypasses them |
-| Rust controller | One-shot launcher source only; background engine/native idle detection not implemented; compilation unverified |
-| Windows scheduling | PowerShell registration script exists; Task Scheduler integration unverified |
-| Local validation | 15 offline Python tests passed; dependency check and three PowerShell syntax checks passed during preparation |
-| GitHub preparation | Local `main` repository and initial commit exist; safe examples, ignore rules, source/tests/docs tracked |
-| Public publication | Pending; no remote configured at this context update; secret gate below remains unresolved |
-| Other priority modules and TUI | Planned; no implemented modules or placeholder functionality should be counted as working |
+## A: repository foundation — in progress
 
-The baseline was established by inspecting source, scripts, configuration, tests, and Git state. Do not infer completed functionality from a module name or roadmap entry. Detailed music metadata, report contents, credentials, and state remain outside Git.
+- [x] Inspect/preserve the starter and existing commits.
+- [x] Establish ignore rules, safe examples, developer docs, persistent context, and offline safety tests.
+- [x] Resolve the earlier publication gate: the owner explicitly permits ignored, untracked `config/.env`.
+- [x] Confirm connected GitHub identity `vxsp` and noninteractive native Git credentials under the owner's Windows account.
+- [ ] Audit complete tracked history and exact publication material; verify private `.env` is ignored/untracked.
+- [ ] Recheck repository availability/ownership, create public `vxsp/nyx` only if absent, configure `origin`, push `main`, verify remote files.
+- [ ] Validate native Windows setup and propagate installer failures reliably.
+- [ ] Validate configuration, structured error handling, and safe logging; strengthen regression tests.
+- [ ] Check Rust availability; install at user level where permitted or document prerequisites/blocker.
 
-## Foundation: context and safe publication
+Do not publish credentials, private reports, snapshots, or media. An ignored local credential alone is not a blocker. Exposed credentials in tracked history/publication material require intervention. Preserve history, never force-push over unrelated work, and do not add a license without approval.
 
-Current focus: establish durable context and finish safe repository preparation without implementing new product features.
+## B: improved Navidrome reporting — next
 
-- [x] Preserve and inspect the existing Python reporter and Rust launcher.
-- [x] Document Windows setup, commands, implemented/planned status, boundaries, and development conventions.
-- [x] Exclude credentials, environments, generated data, archives, binaries, and private media from Git.
-- [x] Add meaningful offline safety tests and validate the current Python environment.
-- [x] Establish `AGENTS.md`, `ARCHITECTURE.md`, and this roadmap as the project handoff.
-- [ ] Resolve the owner's publication secret gate: the preparation audit detected a password in ignored `config/.env`; no matching credential was found in the initial committed tree/history. Preserve it locally. Obtain the owner's direction before publication; do not rotate, delete, or bypass the rule. This finding alone does not prove exposure.
-- [x] Verify the connected GitHub identity: the read-only connector returned account `vxsp`.
-- [ ] Resolve repository availability before creation/reuse. The connector lookup for `vxsp/nyx` returned 404, which can mean absent or inaccessible; it does not establish availability. Recheck ownership/purpose and never overwrite an unrelated repository. Repository creation/push permissions are not yet verified.
-- [ ] Repeat secret and private-data checks against the exact candidate commit and reachable history before publishing.
-- [ ] Publish the approved source/docs/tests to public `nyx`, configure `origin`, push `main`, and verify remote contents. Do not add a license without approval.
+- [ ] Use `Navidrome report - YYYY-MM-DD.md` and `Navidrome report - latest.md` under the existing `Navidrome/` output folder; retain JSON snapshots and preserve old private reports.
+- [ ] Improve availability/scan reporting, library counts, formats, metadata/artwork diagnostics, duplicate candidates, and historical changes using actual API data.
+- [ ] Add safe error/progress feedback and bounded paginated collection without unnecessary server load.
+- [ ] Cover success, failure, partial-write, pagination, and naming behavior with offline tests.
+- [ ] Investigate measured performance improvements; retain read-only operation.
 
-Completion means a verified public repository containing the intended files, with private files excluded and no unresolved publication blocker. Record its actual URL and validation results when available; do not invent a target URL from an assumed account.
+Acceptance: useful, correctly named reports and snapshots; explicit incomplete/unavailable data; failures preserve usable state; no music/server mutation or fabricated metrics. Current output names remain date-only/`Latest.md` until implementation.
 
-## Priority 1: Navidrome reporting and reliable idle execution
+## C: interactive TUI — planned
 
-Status: the reporter works; the following improvements are planned.
+Use Python Textual initially unless inspection demonstrates a stronger reason for Ratatui. Keep UI independent of execution logic.
 
-- Adopt the accepted report filename prefix `Navidrome report`: planned dated name `Navidrome report YYYY-MM-DD.md` and latest name `Navidrome report Latest.md`, retaining the `Navidrome/` subdirectory. Existing `YYYY-MM-DD.md` and `Latest.md` output is current behavior, not compliance with the new prefix yet.
-- Implement naming in a separately authorized change with offline path tests, correct last-run paths, and updated usage documentation. Preserve private historical reports/snapshots; no automatic cleanup or renaming during preparation.
-- Validate the Rust launcher build, command forwarding, working-directory assumptions, and failure exit behavior on native Windows.
-- Validate idle admission, stop-on-activity, AC/battery behavior, no waking, and task instance policy. Inspect any existing `Nyx` task and obtain approval before replacement.
-- Harden settings/API/state validation, full-operation runtime bounds, concurrent-run protection, and interrupted-write recovery.
-- Measure CPU, memory, elapsed time, and request volume on the target laptop using private local output. Set measurable budgets from evidence rather than claiming limits are enforced continuously today.
-- Define the Rust background engine's lifecycle and Python job contract before adding persistent execution or native idle detection. Keep Task Scheduler behavior available until an explicitly approved replacement is verified.
+- [ ] Overview, saved Navidrome statistics, diagnostics, job status, task history.
+- [ ] Reports browser, error logs, keyboard navigation, refresh controls.
+- [ ] Manual job execution with progress/error feedback and no duplicate launch.
+- [ ] Load saved state on startup; never require or start a fresh scan just to open the UI.
+- [ ] Headless navigation/execution tests and native Windows launch validation.
 
-Acceptance: reporting remains read-only and successful; output uses the agreed prefix after implementation; failures preserve usable prior state; native Windows lifecycle checks are recorded; measured resource use is acceptable to the owner. Do not contact the live server as part of offline tests.
+Acceptance: a cohesive, responsive Windows terminal application with low overhead and no additional service.
 
-## Priority 2: Coding project testing and maintenance
+## D: Rust background controller — planned
 
-Status: planned. Existing Nyx unit tests are development checks, not an automation module for other repositories.
+Implement native idle detection (approximately 10 minutes), CPU/RAM monitoring, AC-aware admission, priorities, cooldowns, lifecycle management, single-instance locking, resource budgets, cancellation, persistent state, and resumable useful progress.
 
-Start with explicitly allowlisted local repositories and project-declared test commands. Run bounded, cancellable checks and generate Markdown results. Treat repository commands as executable code, not inherently read-only. Report dirty state and proposed maintenance; do not commit, reset, clean, install dependencies, or update projects without the required scope/approval. Never publish repository secrets or private test output.
+Acceptance: one resource-intensive job at a time; no duplicate job; constrained resources/battery prevent starts; activity cancels or safely suspends work; verify Windows behavior before enabling unattended execution. Keep existing launch paths working.
 
-Acceptance: one explicitly selected project's checks run with a clear execution policy and produce a useful report without incidental changes to its files or Git state.
+## E: Nyx Dev — planned
 
-## Priority 3: Music and FL Studio organization
+Inspect configured/allowlisted repositories, run declared tests, report build health, outdated dependencies, and dirty state. Treat test commands as executable code and bound execution. Never automatically push, reset, clean, or rewrite unrelated repositories. Acceptance: useful project-health Markdown with explicit execution policy and no incidental project changes.
 
-Status: planned. Navidrome metadata diagnostics do not provide local audio inspection or FL Studio project analysis.
+## F: Nyx Audio — planned
 
-Begin with allowlisted directories and read-only inventory, metadata diagnostics, duplicate candidates, and FL Studio project/sample-reference reporting. Explain supported formats and confidence limits. Produce proposed organization actions for review; do not move, rename, retag, or delete originals by default.
+Read-only music/FL Studio inventory, duplicate candidates, naming and metadata diagnostics, oversized exports, unused-file candidates, and suggested cleanup. Acceptance: useful findings with confidence limits and original files unchanged; never automatically edit, delete, move, or retag music.
 
-Acceptance: synthetic fixtures and an approved local scan demonstrate useful diagnostics with original files unchanged and private paths excluded from public output.
+## G: Nyx Research — planned
 
-## Priority 4: Automated research reports
+Configured RSS/release monitoring, article deduplication, categorized Markdown digests, and reading history. Bound fetch/execution budgets; record sources and timestamps; do not add paid services without approval.
 
-Status: planned. Define explicit topics, approved sources, execution/fetch budgets, report cadence, and source attribution. Keep API credentials private. Avoid adding an AI provider, subscription, browser service, or research framework before the requirement is defined.
+## H: backups and maintenance — planned
 
-Acceptance: one approved topic produces a dated Markdown report with traceable sources, timestamps, limitations, bounded execution, and no secret disclosure. Historical analytics across jobs remains planned until its storage and retention are implemented and tested.
+Incremental Restic backups, verification/restore checks, disk-space/large-file analysis, maintenance reports, configurable retention. Never delete originals or permanently purge backups without explicit approval. Validate resolved Windows paths and keep destinations private.
 
-## Priority 5: Backups and PC maintenance
+## I: Nyx Insights — planned
 
-Status: planned. Begin with read-only health/inventory reports, then design incremental backup sources, destinations, retention, integrity verification, and restore checks. Backup output remains private. Validate resolved Windows paths and keep source files unchanged.
+Use accumulated evidence for library growth, metadata improvements, project health, backup history, success rates, and resource trends. Missing history must be shown as unavailable; never fabricate metrics.
 
-Acceptance: an explicitly approved backup can be restored and verified. Cleanup, pruning, overwriting unrelated destinations, system changes, or deletion require separate approval and a reviewed plan; no destructive default maintenance.
+## Autonomous workflow and checkpoint
 
-## Priority 6: Interactive terminal dashboard
+For each coherent increment: inspect, implement, test, fix failures, review scope/secrets, update documentation/log, commit, push validated work, then continue. Request approval only for the owner's safety boundaries: user-data deletion, unrelated-project changes, private-data publication, paid services, destructive system changes, history rewrites, visibility changes, or unverified unattended activation.
 
-Status: planned. Plan a visual terminal interface for job status, idle/resource decisions, progress, history, and report locations. It should consume the engine's state/results rather than duplicate job logic. Select a suitable implementation after the engine interface is defined; no TUI library is chosen yet.
+If blocked, record the cause and continue safe independent tasks. At the end of a session leave an accurate checkpoint; do not claim work continues after the session ends.
 
-Acceptance: a native Windows terminal session displays real engine state responsively with low overhead, supports safe navigation, and closes without disrupting jobs or requiring another service. Controls that mutate data need explicit safety behavior.
-
-## Keeping the roadmap current
-
-For each relevant development change, update its status here, actual behavior in `ARCHITECTURE.md`, durable decisions in `AGENTS.md`, and user-facing behavior in `README.md`. Record what was implemented, how it was validated, missing prerequisites, and the next actionable milestone. Mark completion only with implementation and evidence; keep owner-reported observations distinct from fresh checks. Preserve the priority order unless the owner changes it.
-
-Next action: finish documentation and candidate-commit checks, resolve the publication gate, then recheck repository availability and verify write/push access. Product work starts with Priority 1 after preparation; do not implement later modules opportunistically.
+Current sequence: finish secure publication; complete the minimum foundation reliability needed for B; implement B, then C. Remaining native-Rust prerequisites may be documented while safe Python work continues.

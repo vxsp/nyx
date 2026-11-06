@@ -8,7 +8,7 @@ Read this file, `ARCHITECTURE.md`, `ROADMAP.md`, `README.md`, and `CONTRIBUTING.
 
 ## Product priorities and baseline
 
-Develop in this priority order, subject to the owner's explicit instructions:
+The owner's original product priorities are below. The autonomous directive now sets execution order to milestones A-I in `ROADMAP.md`: foundation/publication, Navidrome improvements, TUI, Rust controller, Dev, Audio, Research, Backup, Insights.
 
 1. Navidrome reporting for `https://vxsp.pikapod.net`.
 2. Coding project testing and maintenance.
@@ -25,9 +25,9 @@ The initial Navidrome reporter already works. The owner supplied this first-repo
 - Rust owns the future background engine and performance-sensitive operations; Python owns API integrations, analysis, and reports. The current Rust launcher is only the first step toward that engine.
 - Keep resource use low and dependencies minimal. Do not add unnecessary resident services.
 - Music operations are read-only by default, both for Navidrome and future local/FL Studio work. Moving, renaming, retagging, deleting, or deduplicating files requires explicit scope and approval for destructive actions.
-- Use `Navidrome report` as the report filename prefix when implementing the naming change. The current reporter still writes `YYYY-MM-DD.md` and `Latest.md`; do not claim the prefix is implemented. See the migration task in `ROADMAP.md`.
-- Plan a visual terminal interface. No TUI exists yet; select its implementation only when that milestone is authorized.
-- Preserve working code, private configuration, reports, and snapshots. Do not implement roadmap features during documentation or publication preparation.
+- Use `Navidrome report - YYYY-MM-DD.md` and `Navidrome report - latest.md` for the authorized naming change. Until implemented, existing date-only and `Latest.md` names remain current behavior.
+- Build a visual terminal interface using Python Textual initially; keep it separate from the engine and read saved state without scanning on startup.
+- Preserve working code, private configuration, reports, and snapshots. Work through authorized milestones in verified increments rather than rebuilding the starter.
 
 ## Runtime boundaries
 
@@ -42,7 +42,7 @@ The initial Navidrome reporter already works. The owner supplied this first-repo
 - Never print or commit credentials, `.env`, authenticated URLs, personal reports, detailed library metadata, music, snapshots, local state, environments, logs, binaries, or starter archives. The owner-approved server URL and aggregate baseline above may appear in project context; this does not authorize publishing private reports or snapshots.
 - Keep `config/.env.example` safe with a placeholder hostname and empty/fake credentials; never copy local values into it.
 - Inspect Git state/remotes and staged contents before publication. Scan working files, archives, staged content, and history without printing values.
-- If any secret is detected, stop publishing and report only its location/category. Obtain the owner's direction before continuing.
+- An ignored, untracked local credential is explicitly permitted and does not block publication. If a credential is exposed in tracked history or material intended for publication, stop publishing and report only its location/category; request intervention. Never print values.
 - Do not rotate credentials, delete local data, rewrite history, force-push, or replace unrelated repositories without explicit authorization.
 - Do not add an open-source license without approval.
 - Navidrome stays read-only by default. Do not start scans, edit playlists/tags, or change server files incidentally.
@@ -60,11 +60,11 @@ cargo test
 git diff --check
 ```
 
-Run applicable checks and report unavailable prerequisites honestly. Rust currently has no unit tests; compilation does not validate idle scheduling. Do not install system tools merely to hide a missing prerequisite.
+Run applicable checks and report unavailable prerequisites honestly. Rust currently has no unit tests; compilation does not validate idle scheduling. Ordinary project dependencies and appropriate user-level Rust installation are authorized where permissions allow; do not make destructive system changes or enable unattended behavior without verification.
 
 Use meaningful offline tests with synthetic data, temporary directories, and mocks. Do not contact the live server or alter personal output. Keep dependency changes minimal. Commit `Cargo.lock` once generated for the application; ignore `target/`.
 
-Keep changes modular and reviewable. Avoid unrelated refactors and formatting changes. Update docs with behavior changes. Do not implement roadmap features during repository preparation.
+Keep changes modular and reviewable. Avoid unrelated refactors and formatting changes. The owner authorizes implementing planned modules, tests/docs, justified refactors, dependency installation, local builds, commits, and pushes of validated work to `vxsp/nyx`. Preserve published history. Do not automatically push changes to other repositories. Continue related tasks without asking the owner to choose each implementation detail; document blockers and continue safe independent work. Request approval for deleting user data, unrelated-project changes, paid services, destructive system changes, history rewrites, visibility changes, or unverified unattended activation.
 
 ## Keeping context current
 
@@ -74,13 +74,14 @@ Update these documents in the same change as the relevant implementation or deci
 - `ARCHITECTURE.md`: actual module boundaries, data flow, persistence, limitations, and validation evidence.
 - `ROADMAP.md`: milestone status, acceptance criteria, blockers, and the next actionable work.
 - `README.md`: user-visible behavior, installation, commands, and current feature status.
+- `docs/DEVELOPMENT_LOG.md`: completed increments, decisions, validation, blockers, and next steps.
 
 Mark work completed only after inspecting its implementation and running applicable checks. Distinguish owner-reported results, locally verified behavior, unverified integration code, and future plans. Record missing prerequisites or blockers without storing credentials or private output. Remove stale claims as work progresses. Any new ChatGPT conversation should read these files through its repository tools, or receive their contents from the owner; files do not automatically carry into an unrelated chat.
 
 ## Publication handoff
 
-The local repository uses `main`. The owner prefers a public GitHub repository named `nyx`; check the authenticated account and repository ownership/purpose before creation or reuse. A read-only GitHub connector check confirmed account `vxsp`; the `vxsp/nyx` lookup returned 404 (absent or inaccessible to that connection), so availability is not proven. Recheck before creating or reusing a repository. No remote or GitHub publication has been configured as of this context update. Do not add a license without approval.
+The owner explicitly approves creating/publishing public `vxsp/nyx`, configuring `origin`, and pushing validated `main` commits while preserving all existing commits. Check authenticated ownership and existing repository contents before creation/reuse; never overwrite an unrelated repository. Do not add a license without approval. See the roadmap and development log for current publication status.
 
-The preparation audit found a password in ignored `config/.env`, while the initial committed tree/history had no secret findings. Publication was stopped under the owner's explicit stop-on-any-secret rule. This is not evidence of prior exposure. Preserve the local file and do not interpret a request for more preparation as approval to bypass that rule. Resolve the publication gate with the owner before any remote write; update this handoff when its status changes.
+The owner has resolved the earlier local-credential publication gate: `config/.env` must stay local, ignored, and untracked; its presence alone is not exposure. Audit complete tracked history and exact publication material before every push. Stop only for exposed credentials or an actual authentication/publication blocker; document it and continue safe independent tasks.
 
 Known gaps: schema validation, complete time-budget coverage, manual-run locking, multi-file transactional output, and the personal-server fallback retained in `run_report`. Refer to `ARCHITECTURE.md` before designing around them.
