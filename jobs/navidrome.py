@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from hashlib import md5
+import html
 import json
 import os
 from pathlib import Path
@@ -45,7 +46,10 @@ def normalized(value: Any) -> str:
 
 def mark(value: Any) -> str:
     """Prevent markdown injection in displayed fields."""
-    return cleaned(value).replace("|", "\\|").replace("\n", " ").replace("\r", " ").replace("`", "'")
+    text = html.escape(cleaned(value), quote=False).replace("\n", " ").replace("\r", " ").replace("`", "'")
+    for char in ("\\", "|", "[", "]", "*", "_"):
+        text = text.replace(char, "\\" + char)
+    return text
 
 
 class NavidromeClient:
@@ -82,6 +86,7 @@ class NavidromeClient:
         try:
             response = self.session.get(
                 f"{self.base}/rest/{endpoint}.view", params=params,
+                allow_redirects=False,
                 timeout=(min(5, remaining_seconds) if remaining_seconds is not None else 5,
                          min(self.timeout, remaining_seconds) if remaining_seconds is not None else self.timeout),
             )

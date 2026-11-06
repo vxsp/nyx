@@ -2,7 +2,7 @@
 
 ## Scope
 
-Nyx 0.1 has Python Navidrome, Dev, and Audio jobs, an optional dashboard, and one Rust launcher. It preserves the working Navidrome reporter and uses Windows Task Scheduler without adding a resident service. Native Windows 11 on an Intel i3-1115G4 laptop with 16 GB RAM is the target; resource efficiency is a goal, not a measured performance guarantee.
+Nyx 0.1 has Python Navidrome, Dev, Audio, and Research jobs, an optional dashboard, and one Rust launcher. It preserves the working Navidrome reporter and uses Windows Task Scheduler without adding a resident service. Native Windows 11 on an Intel i3-1115G4 laptop with 16 GB RAM is the target; resource efficiency is a goal, not a measured performance guarantee.
 
 ## Persistent product context
 
@@ -26,6 +26,7 @@ Accepted boundaries are native Windows without WSL/Docker, Rust for the future b
 | `jobs/navidrome.py` | HTTPS client, collection, diagnostics, comparison, rendering, writes | Read-only integration |
 | `jobs/dev.py` | Configured Git health and opt-in bounded checks | No automatic execution or maintenance in other projects |
 | `jobs/audio.py` | Bounded read-only inventory and optional tag diagnostics | No FLP reference parser, content hashing, or cleanup |
+| `jobs/research.py` | Configured RSS/Atom/public-release fetches and private digests | Explicit manual invocation; no unattended monitor |
 | `config/settings.json` | Versioned resource and collection defaults | Known fields validated before work |
 | `config/.env` | Private server/login/output settings | Local only |
 | `scripts/*.ps1` | Setup, manual invocation, opt-in task registration | Registration modifies Windows state |
@@ -114,11 +115,11 @@ The TUI exposes saved overview/statistics, formats/diagnostics, job state/histor
 
 Opening or refreshing the dashboard never starts collection. N explicitly launches the Python `report` command as a hidden Windows subprocess with streamed output. A UI guard and engine OS lock prevent duplicate work. X stops only a process owned by that dashboard; Q waits for completion or explicit cancellation. Other scheduled/background processes are not owned or cancelled by the UI. Events after forced termination can be stale and are labeled as last-recorded state. No additional service is installed.
 
-An initial Nyx Dev health reporter is implemented; automatic maintenance is not. Read-only Audio inventory and optional tag diagnostics are implemented; FLP reference/unused-sample analysis, research, backups, system maintenance, and historical analytics remain planned. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
+An initial Nyx Dev health reporter is implemented; automatic maintenance is not. Read-only Audio inventory and optional tag diagnostics are implemented; FLP reference/unused-sample analysis, backups, system maintenance, and historical analytics remain planned. Research has an initial explicitly invoked digest implementation. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
 
 ## Validation and documentation maintenance
 
-There are 55 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
+There are 62 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
 
 Public repository: `https://github.com/vxsp/nyx`, branch `main`, remote `origin`. Initial publication was verified by comparing all 26 remote file paths/blob hashes with the published local tree. Every push requires a redacted candidate/history audit.
 
@@ -141,3 +142,11 @@ Reports live under `reports/Dev/`; private details go to `state/dev-last.json`, 
 Inventory uses directory metadata only, reporting formats, FLP presence, repeated-whitespace naming flags, same-name/size duplicate candidates, and large lossless/export candidates. It does not prove content identity or file usage. Optional `--read-tags` uses Mutagen with read-only binary handles; unsupported/corrupt files are unavailable, never counted as missing tags. Parser I/O is not a hard deadline. Reports/JSON stay private under `reports/Audio/` and `state/audio-last.json`; the dashboard browser includes them.
 
 No files are moved, renamed, retagged, hashed, or deleted. FLP internals/sample references are not parsed, so unused-file findings remain unavailable. Synthetic WAV tests verify bytes are unchanged after the real parser runs. No personal music directory was scanned for development.
+
+## Nyx Research boundary
+
+`research-report` uses only private `research.local.json` or configured `research` settings: at most 20 HTTPS feeds/public GitHub repositories, 1 MiB per response, 50 RSS/Atom entries or 10 stable releases per source, and a cooperative 1-600-second budget. UTF-8 XML rejects DTD/entity declarations before parsing. Redirects and implicit .netrc authentication are disabled; configure final HTTPS source URLs. Request/cache headers never contain GitHub credentials. ETag/Last-Modified reduce repeated transfers.
+
+Article identity hashes canonical URLs (without fragments/UTM tracking) or stable source IDs. Retain at most 5,000 seen IDs and 1,000 reading metadata records. Digests display up to 200 retained items collected that local day, preserving earlier same-day entries across refreshes/failures; source status and newly collected count stay explicit. Failed sources retain previous history/cache; errors expose types only. Publisher dates remain source-provided, not invented UTC measurements.
+
+`research-read --item-id PREFIX` explicitly marks a unique known entry read under the shared job lock. Fetched/seen does not mean read. Markdown fields are escaped and report links are encoded. Reports appear under `reports/Research/`; private state is `state/research-last.json`. No periodic monitoring is enabled until scheduling is implemented and verified. Tests use synthetic responses, never live research sources.

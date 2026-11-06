@@ -18,7 +18,8 @@ Version 0.1 implements a Navidrome library reporter, an optional Textual dashboa
 | Native Rust idle detection, modular scheduling, cancellation | Planned |
 | Configured project health, test/build/dependency checks | Implemented initial Nyx Dev; commands require explicit opt-in |
 | Read-only music/FL Studio inventory and optional tag diagnostics | Implemented initial Nyx Audio; FLP sample usage unavailable |
-| Automatic repository maintenance, research, FLP reference/unused-file analysis | Planned |
+| Configured RSS/Atom and public release digests, seen/read history | Implemented initial Nyx Research; manual only |
+| Automatic repository maintenance and FLP reference/unused-file analysis | Planned |
 | Interactive Textual dashboard reading saved state | Implemented initial version; headless Windows tests passed |
 | Incremental backups, system maintenance, historical analytics | Planned |
 
@@ -126,6 +127,20 @@ Copy `config/audio.example.json` to ignored `config/audio.local.json` and explic
 The scanner skips links/reparse points, limits entries/time, reports partial scope, and leaves originals unchanged. Reports show formats, FLP counts, naming flags, same-name/size duplicate candidates, and large lossless/export candidates. Optional tags use read-only file handles; unavailable parsing is not treated as missing metadata.
 
 FLP internals/sample usage and confirmed content identity are **not** established. Nothing is marked safe to delete. Reports and inventory JSON stay private; the dashboard browser includes Audio reports.
+
+## Nyx Research digests
+
+Copy `config/research.example.json` to ignored `config/research.local.json` and replace placeholder feeds/repositories. Use final HTTPS feed URLs; redirects and implicit .netrc authentication are disabled.
+
+```powershell
+.\.venv\Scripts\python.exe main.py research-report
+# Explicitly acknowledge a known article ID shown in the digest:
+.\.venv\Scripts\python.exe main.py research-read --item-id 0123456789ab
+```
+
+The ID above is a placeholder. Collection fetches bounded RSS/Atom entries and stable public GitHub releases, deduplicates articles, and records source status/date information. Digests remain cumulative within the local day (up to 200 displayed); refreshes do not discard earlier same-day entries. State retains 5,000 seen IDs and 1,000 reading records. Seen is not treated as read.
+
+Reports stay private under `reports/Research/` and appear in the browser. Source failures preserve retained history; unavailable dates are labeled. No source means an actionable empty report, not automatic web research. Periodic monitoring is not enabled.
 
 ## Interactive dashboard
 

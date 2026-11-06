@@ -43,3 +43,10 @@
 - Private Markdown/JSON output is integrated into the report browser. FLP sample usage, unused-file analysis, and confirmed content identity remain unimplemented and are labeled unavailable; no deletion advice is asserted.
 - Validation: 55 offline tests passed, including source-byte/mtime preservation, actual synthetic WAV parsing, bounds, overlap, configuration, and unavailable metadata. Pip consistency and redacted audit passed; media ignore/audit exclusions were expanded.
 - Next: G's configured RSS/release digests. D remains blocked on Rust/MSVC; B/C live/terminal checks, native containment, and advanced FLP analysis remain follow-ups. No unattended behavior activated.
+
+## 2026-11-05: opt-in Nyx Research digests
+
+- Added explicitly configured HTTPS RSS/Atom and public stable GitHub release collection with byte/source/entry/deadline bounds and conditional requests. Redirects and implicit .netrc credentials are disabled; XML DTD/entities are rejected.
+- Added canonical article deduplication, cumulative daily categorized digests, bounded seen/reading history, explicit read acknowledgement, source/date provenance and unavailable statuses. Source failures retain history; seen is never counted as read.
+- Hardened Markdown field escaping and disabled Navidrome API redirects to avoid authenticated HTTP downgrade behavior. All requests remain read-only.
+- Validation: 62 offline tests passed; pip consistency passed. Research responses are synthetic; no live feeds or personal data were queried. Periodic monitoring remains disabled. Next: H's backup/maintenance boundary, then evidence-based historical insights.

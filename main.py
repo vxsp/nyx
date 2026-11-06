@@ -12,6 +12,7 @@ import psutil
 from jobs.navidrome import NavidromeError, atomic_write, run_report
 from jobs.dev import run_dev_report
 from jobs.audio import run_audio_report
+from jobs.research import mark_read, run_research_report
 from nyx.config import ConfigurationError, load_settings
 from nyx.logging import configure_logging
 from nyx.runtime import JobBusyError, job_lock, record_event, record_progress
@@ -59,15 +60,18 @@ def due(config: dict) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Nyx personal background automation runner")
-    parser.add_argument("command", choices=["report", "run", "status", "tui", "dev-report", "audio-report"], help="report=Navidrome; run=scheduled; status=last run; tui=dashboard; dev-report=project health; audio-report=inventory")
+    parser.add_argument("command", choices=["report", "run", "status", "tui", "dev-report", "audio-report", "research-report", "research-read"], help="Report jobs are opt-in; run=scheduled Navidrome; tui=dashboard")
     parser.add_argument("--run-checks", action="store_true", help="Explicitly execute declared project checks with dev-report")
     parser.add_argument("--read-tags", action="store_true", help="Read local tags with optional Mutagen (audio-report only)")
+    parser.add_argument("--item-id", help="Known research ID prefix (research-read only)")
     args = parser.parse_args()
     if args.run_checks and args.command != "dev-report":
         parser.error("--run-checks is only supported with dev-report")
     if args.read_tags and args.command != "audio-report":
         parser.error("--read-tags is only supported with audio-report")
-    module = {"dev-report": "dev", "audio-report": "audio"}.get(args.command, "navidrome")
+    if bool(args.item_id) != (args.command == "research-read"):
+        parser.error("research-read requires --item-id; other commands do not accept it")
+    module = {"dev-report": "dev", "audio-report": "audio", "research-report": "research", "research-read": "research"}.get(args.command, "navidrome")
     logger = None
     try:
         if args.command == "tui":
@@ -87,6 +91,10 @@ def main() -> int:
         logger = configure_logging(ROOT)
         config = settings()
         with job_lock(ROOT):
+            if args.command == "research-read":
+                mark_read(ROOT, args.item_id)
+                print("Known research entry marked read.")
+                return 0
             if args.command == "run":
                 reason = None
                 if not config.get("navidrome", {}).get("enabled", True):
@@ -115,6 +123,8 @@ def main() -> int:
                     output = run_dev_report(ROOT, config, run_checks=args.run_checks, progress=progress)
                 elif module == "audio":
                     output = run_audio_report(ROOT, config, read_tags=args.read_tags, progress=progress)
+                elif module == "research":
+                    output = run_research_report(ROOT, config, progress=progress)
                 else:
                     output = run_report(ROOT, config, progress=progress)
                 status_path = ROOT / "state" / f"{module}-last-run.json" if module != "navidrome" else last_run_path()

@@ -1,0 +1,5 @@
+{
+  "feeds": [{"url": "https://example.com/feed.xml", "category": "Research"}],
+  "github_repositories": ["owner/repository"],
+  "max_seconds": 120
+}

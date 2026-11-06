@@ -6,7 +6,7 @@ This file is the primary task queue. Read it with `AGENTS.md`, `ARCHITECTURE.md`
 
 ## Baseline and reference measurements
 
-Implemented: read-only Navidrome reporting, metadata diagnostics, duplicate candidates, previous-snapshot comparison, Markdown reports/JSON state, Python admission checks, one-shot Rust launcher source, and PowerShell setup/task helpers. There are 55 passing offline Python tests, including headless dashboard and synthetic real-process tests. Rust compilation and Windows idle/AC scheduling are unverified.
+Implemented: read-only Navidrome reporting, metadata diagnostics, duplicate candidates, previous-snapshot comparison, Markdown reports/JSON state, Python admission checks, one-shot Rust launcher source, and PowerShell setup/task helpers. There are 62 passing offline Python tests, including headless dashboard and synthetic real-process tests. Rust compilation and Windows idle/AC scheduling are unverified.
 
 Owner-reported first run at `https://vxsp.pikapod.net`: 1,736 tracks, 398 albums, 214 artists, 12 playlists, 5.97 GiB indexed sizes; 1,253 M4A, 476 MP3, 4 FLAC, 3 WAV; 1,006 missing track numbers, 20 missing artwork references, 3 duplicate candidate groups; collection took 46 seconds. These approved aggregates are historical observations, never hardcoded live results or test expectations. Detailed reports and snapshots stay private.
 
@@ -76,9 +76,12 @@ Never automatically fetch, install, commit, push, reset, clean, or rewrite inspe
 
 Never automatically edit, delete, move, or retag music. No file is designated safe to delete. Complete inventory means within configured accessible scope and limits, not the whole machine.
 
-## G: Nyx Research — planned
+## G: Nyx Research — initial opt-in digests implemented
 
-Configured RSS/release monitoring, article deduplication, categorized Markdown digests, and reading history. Bound fetch/execution budgets; record sources and timestamps; do not add paid services without approval.
+- [x] Configured HTTPS RSS/Atom and stable public GitHub releases with bounded bytes/entries/source count/deadline and conditional requests.
+- [x] Article deduplication, categorized cumulative daily Markdown digests, explicit source failures and publisher dates, bounded seen/reading history.
+- [x] Explicit unique-ID read acknowledgements, safe Markdown, private state/report-browser integration, and synthetic fetch/failure/XML-security tests.
+- [ ] Live configured-source integration and periodic scheduling remain unverified/disabled. No paid service or private GitHub token was introduced.
 
 ## H: backups and maintenance — scrapped
 
@@ -94,4 +97,4 @@ For each coherent increment: inspect, implement, test, fix failures, review scop
 
 If blocked, record the cause and continue safe independent tasks. At the end of a session leave an accurate checkpoint; do not claim work continues after the session ends.
 
-Current checkpoint: publication and initial B/C increments verified; native D is blocked on Rust/MSVC prerequisites. Keep B/C integration/performance follow-ups explicit. E now has a verified initial health reporter with opt-in checks. F now has a verified initial read-only inventory; next independent module is G (configured RSS/release digests). Retain D containment, FLP-reference, and B/C live integration follow-ups. Do not enable unattended jobs.
+Current checkpoint: publication and initial B/C increments verified; native D is blocked on Rust/MSVC prerequisites. Keep B/C integration/performance follow-ups explicit. E now has a verified initial health reporter with opt-in checks. F now has a verified initial read-only inventory; G now has verified opt-in RSS/release digests; next is H's backup/maintenance boundary. Retain D containment, FLP-reference, and B/C live integration follow-ups. Do not enable unattended jobs.
