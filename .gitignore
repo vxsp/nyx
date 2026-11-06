@@ -58,8 +58,14 @@ backups/
 *.ogg
 *.opus
 *.aiff
+*.aif
 *.wma
 *.flp
+*.mid
+*.midi
+*.sf2
+*.sfz
+*.fst
 
 # Native binaries and Windows/editor metadata.
 *.exe

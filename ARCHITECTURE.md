@@ -2,7 +2,7 @@
 
 ## Scope
 
-Nyx 0.1 has one Python job and one Rust executable. It preserves the working Navidrome reporter and uses Windows Task Scheduler without adding a resident service. Native Windows 11 on an Intel i3-1115G4 laptop with 16 GB RAM is the target; resource efficiency is a goal, not a measured performance guarantee.
+Nyx 0.1 has Python Navidrome, Dev, and Audio jobs, an optional dashboard, and one Rust launcher. It preserves the working Navidrome reporter and uses Windows Task Scheduler without adding a resident service. Native Windows 11 on an Intel i3-1115G4 laptop with 16 GB RAM is the target; resource efficiency is a goal, not a measured performance guarantee.
 
 ## Persistent product context
 
@@ -25,12 +25,13 @@ Accepted boundaries are native Windows without WSL/Docker, Rust for the future b
 | `nyx/tui.py`, `nyx/tui.tcss` | Optional Textual views/navigation and explicit manual CLI subprocess | No resident engine or automatic startup scan |
 | `jobs/navidrome.py` | HTTPS client, collection, diagnostics, comparison, rendering, writes | Read-only integration |
 | `jobs/dev.py` | Configured Git health and opt-in bounded checks | No automatic execution or maintenance in other projects |
+| `jobs/audio.py` | Bounded read-only inventory and optional tag diagnostics | No FLP reference parser, content hashing, or cleanup |
 | `config/settings.json` | Versioned resource and collection defaults | Known fields validated before work |
 | `config/.env` | Private server/login/output settings | Local only |
 | `scripts/*.ps1` | Setup, manual invocation, opt-in task registration | Registration modifies Windows state |
 | `tests/` | Offline behavior checks | No real server or Task Scheduler integration |
 
-Core Python has three direct dependencies: `requests`, `python-dotenv`, and `psutil`. Versions use bounded ranges, not a lock. The optional `requirements-tui.txt` pins Textual 8.2.8, keeping dashboard imports/dependencies out of scheduled reporting. Rust uses only the standard library. Existing paths remain in place to preserve scripts and imports.
+Core Python has three direct dependencies: `requests`, `python-dotenv`, and `psutil`. Versions use bounded ranges, not a lock. Optional `requirements-tui.txt` pins Textual 8.2.8 and `requirements-audio.txt` pins Mutagen 1.48.1; both imports/dependencies stay out of scheduled reporting. Rust uses only the standard library. Existing paths remain in place to preserve scripts and imports.
 
 ## Execution flow
 
@@ -113,11 +114,11 @@ The TUI exposes saved overview/statistics, formats/diagnostics, job state/histor
 
 Opening or refreshing the dashboard never starts collection. N explicitly launches the Python `report` command as a hidden Windows subprocess with streamed output. A UI guard and engine OS lock prevent duplicate work. X stops only a process owned by that dashboard; Q waits for completion or explicit cancellation. Other scheduled/background processes are not owned or cancelled by the UI. Events after forced termination can be stale and are labeled as last-recorded state. No additional service is installed.
 
-An initial Nyx Dev health reporter is implemented; automatic maintenance is not. Local music/FL Studio analysis, research, backups, system maintenance, and historical analytics remain planned modules. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
+An initial Nyx Dev health reporter is implemented; automatic maintenance is not. Read-only Audio inventory and optional tag diagnostics are implemented; FLP reference/unused-sample analysis, research, backups, system maintenance, and historical analytics remain planned. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
 
 ## Validation and documentation maintenance
 
-There are 48 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
+There are 55 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
 
 Public repository: `https://github.com/vxsp/nyx`, branch `main`, remote `origin`. Initial publication was verified by comparing all 26 remote file paths/blob hashes with the published local tree. Every push requires a redacted candidate/history audit.
 
@@ -132,3 +133,11 @@ Declared checks run only with `--run-checks`. Commands are argument arrays, neve
 Dependency checks are explicitly declared commands. Pip-style JSON can yield an outdated-package count; missing/truncated/unrecognized output is not treated as a measured count. Nyx never installs or upgrades those dependencies automatically.
 
 Reports live under `reports/Dev/`; private details go to `state/dev-last.json`, successful report paths to `dev-last-run.json`, and module-tagged events to the shared bounded history. Dev reports do not change Navidrome's cooldown. A successful report job means the report was generated, not that every project check passed; individual findings retain their own status.
+
+## Nyx Audio boundary
+
+`audio-report` reads only roots declared in private `config/audio.local.json` (or `audio` settings). Traversal is bounded by visited entries and a cooperative deadline; links/reparse points and common generated/system folders are skipped. Overlapping roots do not double count selected files. Access failures and exhausted budgets make the scope explicitly partial.
+
+Inventory uses directory metadata only, reporting formats, FLP presence, repeated-whitespace naming flags, same-name/size duplicate candidates, and large lossless/export candidates. It does not prove content identity or file usage. Optional `--read-tags` uses Mutagen with read-only binary handles; unsupported/corrupt files are unavailable, never counted as missing tags. Parser I/O is not a hard deadline. Reports/JSON stay private under `reports/Audio/` and `state/audio-last.json`; the dashboard browser includes them.
+
+No files are moved, renamed, retagged, hashed, or deleted. FLP internals/sample references are not parsed, so unused-file findings remain unavailable. Synthetic WAV tests verify bytes are unchanged after the real parser runs. No personal music directory was scanned for development.

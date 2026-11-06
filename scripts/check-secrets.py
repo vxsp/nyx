@@ -28,7 +28,7 @@ def private_path(path: str) -> bool:
         or (path.startswith("config/") and ".local." in name)
         or any(part in (".venv", "target", "__pycache__") for part in parts)
         or (path.startswith(("logs/", "reports/", "state/")) and not path.endswith("/.gitkeep"))
-        or Path(path).suffix.lower() in {".zip", ".7z", ".exe", ".dll", ".mp3", ".flac", ".wav", ".m4a", ".flp", ".pem", ".key"}
+        or Path(path).suffix.lower() in {".zip", ".7z", ".rar", ".exe", ".dll", ".mp3", ".flac", ".wav", ".m4a", ".aac", ".ogg", ".opus", ".aif", ".aiff", ".wma", ".flp", ".mid", ".midi", ".sf2", ".sfz", ".fst", ".pem", ".key"}
     )
 
 

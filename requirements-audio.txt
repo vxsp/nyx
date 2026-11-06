@@ -1,0 +1,3 @@
+-r requirements.txt
+# Optional read-only metadata parsing; inventory needs no extra dependency.
+mutagen==1.48.1

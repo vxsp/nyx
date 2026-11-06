@@ -35,6 +35,7 @@ The initial Navidrome reporter already works. The owner supplied this first-repo
 - `main.py` loads `config/.env`, validates settings, applies gates for `run`, and dispatches the reporter under an OS file lock. Manual `report` bypasses enabled/cooldown/resource gates but respects the lock. `status` reads local state without loading settings.
 - `jobs/navidrome.py` handles read-only HTTPS collection, diagnostics, snapshot comparison, and reports. Preserve endpoint behavior and credential redaction.
 - `jobs/dev.py` inspects only configured repository roots. `dev-report` is metadata-only; `--run-checks` explicitly opts into declared executable argument arrays. Private paths/checks belong in ignored `config/projects.local.json`. No automatic fetching, installation, commits, pushes, resets, or cleanup in inspected projects. Commands can have their own side effects; keep them trusted and opt-in.
+- `jobs/audio.py` inventories only configured roots from ignored `config/audio.local.json`. `audio-report` reads directory metadata; `--read-tags` opts into Mutagen through read-only file handles. Never follow links/reparse points or rename, retag, hash, or delete files incidentally. Duplicate identity and FLP sample usage are not established by this inventory.
 - Keep Python for integrations/analytics and Rust for coordination/performance-sensitive work. Avoid unnecessary dependencies and services.
 - Use native PowerShell. Account for Windows paths and native-command exit codes. Never require WSL or Docker.
 

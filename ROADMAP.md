@@ -6,7 +6,7 @@ This file is the primary task queue. Read it with `AGENTS.md`, `ARCHITECTURE.md`
 
 ## Baseline and reference measurements
 
-Implemented: read-only Navidrome reporting, metadata diagnostics, duplicate candidates, previous-snapshot comparison, Markdown reports/JSON state, Python admission checks, one-shot Rust launcher source, and PowerShell setup/task helpers. There are 48 passing offline Python tests, including headless dashboard and synthetic real-process tests. Rust compilation and Windows idle/AC scheduling are unverified.
+Implemented: read-only Navidrome reporting, metadata diagnostics, duplicate candidates, previous-snapshot comparison, Markdown reports/JSON state, Python admission checks, one-shot Rust launcher source, and PowerShell setup/task helpers. There are 55 passing offline Python tests, including headless dashboard and synthetic real-process tests. Rust compilation and Windows idle/AC scheduling are unverified.
 
 Owner-reported first run at `https://vxsp.pikapod.net`: 1,736 tracks, 398 albums, 214 artists, 12 playlists, 5.97 GiB indexed sizes; 1,253 M4A, 476 MP3, 4 FLAC, 3 WAV; 1,006 missing track numbers, 20 missing artwork references, 3 duplicate candidate groups; collection took 46 seconds. These approved aggregates are historical observations, never hardcoded live results or test expectations. Detailed reports and snapshots stay private.
 
@@ -66,9 +66,15 @@ Acceptance: one resource-intensive job at a time; no duplicate job; constrained 
 
 Never automatically fetch, install, commit, push, reset, clean, or rewrite inspected repositories. Check commands are trusted executable code and may have their own side effects. A generated report is not a claim that checks passed.
 
-## F: Nyx Audio — planned
+## F: Nyx Audio — initial read-only inventory implemented
 
-Read-only music/FL Studio inventory, duplicate candidates, naming and metadata diagnostics, oversized exports, unused-file candidates, and suggested cleanup. Acceptance: useful findings with confidence limits and original files unchanged; never automatically edit, delete, move, or retag music.
+- [x] Explicit roots, bounded entry/time inventory, skip links/reparse points, overlapping-root deduplication, and partial-scope reporting.
+- [x] Music formats, FLP presence, same-name/size duplicate candidates, repeated-whitespace flags, and large lossless/export review candidates.
+- [x] Optional pinned Mutagen tag/artwork-reference diagnostics through read-only handles; corrupt/unsupported files remain unavailable.
+- [x] Markdown/JSON reports and browser integration; synthetic tests verify source bytes/mtime unchanged and parser behavior.
+- [ ] FLP sample-reference parsing, confirmed content duplicates, and unused-file analysis remain unimplemented; do not infer them from inventory.
+
+Never automatically edit, delete, move, or retag music. No file is designated safe to delete. Complete inventory means within configured accessible scope and limits, not the whole machine.
 
 ## G: Nyx Research — planned
 
@@ -88,4 +94,4 @@ For each coherent increment: inspect, implement, test, fix failures, review scop
 
 If blocked, record the cause and continue safe independent tasks. At the end of a session leave an accurate checkpoint; do not claim work continues after the session ends.
 
-Current checkpoint: publication and initial B/C increments verified; native D is blocked on Rust/MSVC prerequisites. Keep B/C integration/performance follow-ups explicit. E now has a verified initial health reporter with opt-in checks. Next independent module is F (read-only music/FL Studio inventory); retain D containment and B/C live integration follow-ups. Do not enable unattended jobs.
+Current checkpoint: publication and initial B/C increments verified; native D is blocked on Rust/MSVC prerequisites. Keep B/C integration/performance follow-ups explicit. E now has a verified initial health reporter with opt-in checks. F now has a verified initial read-only inventory; next independent module is G (configured RSS/release digests). Retain D containment, FLP-reference, and B/C live integration follow-ups. Do not enable unattended jobs.

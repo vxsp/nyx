@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import psutil
 from jobs.navidrome import NavidromeError, atomic_write, run_report
 from jobs.dev import run_dev_report
+from jobs.audio import run_audio_report
 from nyx.config import ConfigurationError, load_settings
 from nyx.logging import configure_logging
 from nyx.runtime import JobBusyError, job_lock, record_event, record_progress
@@ -58,12 +59,15 @@ def due(config: dict) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Nyx personal background automation runner")
-    parser.add_argument("command", choices=["report", "run", "status", "tui", "dev-report"], help="report=manual Navidrome; run=scheduled; status=last run; tui=dashboard; dev-report=project health")
+    parser.add_argument("command", choices=["report", "run", "status", "tui", "dev-report", "audio-report"], help="report=Navidrome; run=scheduled; status=last run; tui=dashboard; dev-report=project health; audio-report=inventory")
     parser.add_argument("--run-checks", action="store_true", help="Explicitly execute declared project checks with dev-report")
+    parser.add_argument("--read-tags", action="store_true", help="Read local tags with optional Mutagen (audio-report only)")
     args = parser.parse_args()
     if args.run_checks and args.command != "dev-report":
         parser.error("--run-checks is only supported with dev-report")
-    module = "dev" if args.command == "dev-report" else "navidrome"
+    if args.read_tags and args.command != "audio-report":
+        parser.error("--read-tags is only supported with audio-report")
+    module = {"dev-report": "dev", "audio-report": "audio"}.get(args.command, "navidrome")
     logger = None
     try:
         if args.command == "tui":
@@ -107,9 +111,13 @@ def main() -> int:
                 print(f"Nyx: {phase} ({count})", file=sys.stderr, flush=True)
 
             try:
-                output = (run_dev_report(ROOT, config, run_checks=args.run_checks, progress=progress)
-                          if module == "dev" else run_report(ROOT, config, progress=progress))
-                status_path = ROOT / "state" / "dev-last-run.json" if module == "dev" else last_run_path()
+                if module == "dev":
+                    output = run_dev_report(ROOT, config, run_checks=args.run_checks, progress=progress)
+                elif module == "audio":
+                    output = run_audio_report(ROOT, config, read_tags=args.read_tags, progress=progress)
+                else:
+                    output = run_report(ROOT, config, progress=progress)
+                status_path = ROOT / "state" / f"{module}-last-run.json" if module != "navidrome" else last_run_path()
                 atomic_write(status_path, json.dumps({
                     "completed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                     "report_path": str(output), "module": module, "status": "success",

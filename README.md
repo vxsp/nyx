@@ -17,7 +17,8 @@ Version 0.1 implements a Navidrome library reporter, an optional Textual dashboa
 | PowerShell setup and idle-task registration | Scripts present; registration unverified during preparation |
 | Native Rust idle detection, modular scheduling, cancellation | Planned |
 | Configured project health, test/build/dependency checks | Implemented initial Nyx Dev; commands require explicit opt-in |
-| Automatic repository maintenance, research, music/FL Studio analysis | Planned |
+| Read-only music/FL Studio inventory and optional tag diagnostics | Implemented initial Nyx Audio; FLP sample usage unavailable |
+| Automatic repository maintenance, research, FLP reference/unused-file analysis | Planned |
 | Interactive Textual dashboard reading saved state | Implemented initial version; headless Windows tests passed |
 | Incremental backups, system maintenance, historical analytics | Planned |
 
@@ -109,6 +110,22 @@ No configured repositories means an actionable empty report, not a scan of your 
 Results include branch/dirty state, per-check status, bounded output, and pip-style outdated-package counts when a declared dependency check returns valid JSON. Reports stay under `reports/Dev/` and appear in the dashboard browser; private JSON details are in `state/dev-last.json`. Navidrome cooldown is unaffected. A successfully generated report can contain failed checks.
 
 Checks have individual timeouts within a 600-second total budget. Capture stops near 1 MiB (sampled every 50 ms), saving only a redacted 16 KiB tail. Windows termination targets the launched active process tree; commands that daemonize after their parent exits are not securely contained. Unattended Dev execution remains disabled pending the native controller.
+
+## Nyx Audio inventory
+
+Copy `config/audio.example.json` to ignored `config/audio.local.json` and explicitly select music/FL Studio roots.
+
+```powershell
+# Directory metadata only:
+.\.venv\Scripts\python.exe main.py audio-report
+# Optional read-only tag parsing:
+.\.venv\Scripts\python.exe -m pip install -r requirements-audio.txt
+.\.venv\Scripts\python.exe main.py audio-report --read-tags
+```
+
+The scanner skips links/reparse points, limits entries/time, reports partial scope, and leaves originals unchanged. Reports show formats, FLP counts, naming flags, same-name/size duplicate candidates, and large lossless/export candidates. Optional tags use read-only file handles; unavailable parsing is not treated as missing metadata.
+
+FLP internals/sample usage and confirmed content identity are **not** established. Nothing is marked safe to delete. Reports and inventory JSON stay private; the dashboard browser includes Audio reports.
 
 ## Interactive dashboard
 

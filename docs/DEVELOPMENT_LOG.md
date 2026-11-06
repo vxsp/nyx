@@ -35,3 +35,11 @@
 - Added Dev Markdown/JSON reports, separate last-success state, module-tagged history/progress, and report-browser support. Metadata-only tests verify source and Git index bytes remain unchanged; Navidrome cooldown isolation is tested.
 - Validation: 48 offline tests passed; pip consistency and secret audit passed. Remaining limitation: daemonized descendants after the parent exits need native Windows containment (D); declared checks remain trusted/opt-in with no unattended activation.
 - Checkpoint: public main includes the initial dashboard (`4ec74fc`); this increment follows with preserved history. D remains blocked on Rust/MSVC. Next independent task is F's read-only inventory, while native/live integration follow-ups remain explicit.
+
+## 2026-11-05: read-only Nyx Audio inventory
+
+- Added explicitly configured, entry/time-bounded music/FL Studio inventory with link/reparse avoidance, overlapping-root deduplication, partial-scope flags, format/FLP counts, naming flags, same-name/size duplicate candidates, and large lossless/export candidates.
+- Added optional pinned Mutagen 1.48.1 tag/artwork diagnostics through read-only handles. Unsupported/corrupt data remains unavailable; no mutation APIs are called. No personal music/production directories were scanned.
+- Private Markdown/JSON output is integrated into the report browser. FLP sample usage, unused-file analysis, and confirmed content identity remain unimplemented and are labeled unavailable; no deletion advice is asserted.
+- Validation: 55 offline tests passed, including source-byte/mtime preservation, actual synthetic WAV parsing, bounds, overlap, configuration, and unavailable metadata. Pip consistency and redacted audit passed; media ignore/audit exclusions were expanded.
+- Next: G's configured RSS/release digests. D remains blocked on Rust/MSVC; B/C live/terminal checks, native containment, and advanced FLP analysis remain follow-ups. No unattended behavior activated.
