@@ -23,3 +23,7 @@ Commit the generated application's `Cargo.lock`; never commit `target/`. Verify 
 Only after a successful manual report and inspected task configuration, test idle admission, AC/battery constraints, activity interruption, timeout, ignore-new instance policy, sleep/wake behavior, and crash recovery. Use synthetic work where possible before live collection. Confirm private snapshots remain usable after interruption.
 
 `scripts/register-idle-task.ps1` creates or replaces the task named `Nyx`. Inspect any existing task and obtain approval before replacement. No task has been registered or unattended behavior activated by this development session. Do not enable unattended scheduling by default until these checks pass.
+
+## Dashboard validation
+
+Optional Textual 8.2.8 is installed in the local virtual environment. Headless tests on native Windows verify keyboard navigation, saved-only startup/refresh, and real synthetic subprocess execution/cancellation. These are not a manual terminal UX review or a fresh live Navidrome scan. Launch `python main.py tui` after installing `requirements-tui.txt`; opening it does not query the server. No required MSVC C++ tools were found by Visual Studio discovery.

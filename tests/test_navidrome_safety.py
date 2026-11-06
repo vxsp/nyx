@@ -21,6 +21,33 @@ def snapshot():
 
 
 class NavidromeSafetyTests(unittest.TestCase):
+    def test_multiple_pages_and_duplicate_ids_do_not_repeat_album_requests(self):
+        client = Mock()
+        client.base = "https://navidrome.example.com"
+        def response(endpoint, **params):
+            if endpoint == "getAlbumList2":
+                page = [{"id": "a"}, {"id": "b"}] if params["offset"] == 0 else [{"id": "a"}]
+                return {"albumList2": {"album": page}}
+            if endpoint == "getAlbum":
+                return {"album": {"song": [{"id": "same-track"}]}}
+            return {}
+        client.get.side_effect = response
+        progress = Mock()
+        result = navidrome.collect(client, 2, 10, 600, progress=progress)
+        self.assertEqual(len(result["albums"]), 2)
+        self.assertEqual(len(result["songs"]), 1)
+        album_calls = [call for call in client.get.call_args_list if call.args[0] == "getAlbum"]
+        self.assertEqual(len(album_calls), 2)
+        progress.assert_any_call("collected", 3, 3)
+
+    def test_missing_album_id_aborts_instead_of_saving_partial_data(self):
+        client = Mock()
+        client.get.side_effect = lambda endpoint, **kwargs: (
+            {"albumList2": {"album": [{"name": "Synthetic album"}]}} if endpoint == "getAlbumList2" else {}
+        )
+        with self.assertRaisesRegex(navidrome.NavidromeError, "missing an ID"):
+            navidrome.collect(client, 200, 2000, 600)
+
     def test_report_names_summary_and_old_reports_preserved(self):
         with TemporaryDirectory() as folder:
             root = Path(folder)

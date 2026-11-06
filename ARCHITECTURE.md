@@ -10,7 +10,7 @@ The owner's priority order is Navidrome reporting, coding project testing/mainte
 
 The existing Navidrome integration targets `https://vxsp.pikapod.net` through private environment configuration. Its first successful report, as supplied by the owner, found **1,736 tracks, 398 albums, 214 artists, and 12 playlists**. This historical aggregate is approved project context, not a fresh server measurement or a fixed test expectation. Detailed reports, paths, playlists, and snapshots remain private.
 
-Accepted boundaries are native Windows without WSL/Docker, Rust for the future background engine and performance-sensitive operations, and Python for integrations, analysis, and reporting. Music operations remain read-only by default. Preserve existing working code and keep resource use low. A visual terminal interface is planned; its framework and engine interface have not been selected.
+Accepted boundaries are native Windows without WSL/Docker, Rust for the future background engine and performance-sensitive operations, and Python for integrations, analysis, and reporting. Music operations remain read-only by default. Preserve existing working code and keep resource use low. An initial Python Textual terminal interface is implemented as a saved-state client of the existing CLI; the native background engine remains planned.
 
 ## Current boundaries
 
@@ -21,13 +21,15 @@ Accepted boundaries are native Windows without WSL/Docker, Rust for the future b
 | `nyx/config.py` | Strict known-setting type/range validation and defaults | Unknown future sections preserved |
 | `nyx/runtime.py` | OS-managed exclusive job lock, progress and bounded event history | No native idle controller |
 | `nyx/logging.py` | Rotating redacted JSON logs | No server bodies/raw exceptions |
+| `nyx/saved.py` | Bounded saved-state/report/log reads and cached legacy-snapshot summaries | No network or startup writes |
+| `nyx/tui.py`, `nyx/tui.tcss` | Optional Textual views/navigation and explicit manual CLI subprocess | No resident engine or automatic startup scan |
 | `jobs/navidrome.py` | HTTPS client, collection, diagnostics, comparison, rendering, writes | Only implemented job |
 | `config/settings.json` | Versioned resource and collection defaults | Known fields validated before work |
 | `config/.env` | Private server/login/output settings | Local only |
 | `scripts/*.ps1` | Setup, manual invocation, opt-in task registration | Registration modifies Windows state |
 | `tests/` | Offline behavior checks | No real server or Task Scheduler integration |
 
-Python has three direct dependencies: `requests`, `python-dotenv`, and `psutil`. Versions use bounded ranges, not a lock. Rust uses only the standard library. Existing paths remain in place to preserve scripts and imports.
+Core Python has three direct dependencies: `requests`, `python-dotenv`, and `psutil`. Versions use bounded ranges, not a lock. The optional `requirements-tui.txt` pins Textual 8.2.8, keeping dashboard imports/dependencies out of scheduled reporting. Rust uses only the standard library. Existing paths remain in place to preserve scripts and imports.
 
 ## Execution flow
 
@@ -59,7 +61,7 @@ The registration script uses an interactive-token account, least privilege, idle
 2. `NavidromeClient` requires HTTPS and nonempty login fields.
 3. Each HTTP GET uses Subsonic token-and-salt authentication. The protocol's MD5 construction is for API compatibility, not password storage. Network errors omit authenticated request URLs.
 4. Collection calls `ping`, `getScanStatus`, `getArtists`, and `getPlaylists`.
-5. `getAlbumList2` pages through albums; sequential `getAlbum` requests fetch their tracks. Reaching the album safety limit aborts instead of saving a deliberately truncated snapshot.
+5. `getAlbumList2` pages through albums; sequential `getAlbum` requests fetch their tracks. Repeated album IDs are fetched once, repeated song IDs are counted once, and missing IDs abort rather than save an incomplete snapshot. Reaching the album safety limit also aborts.
 6. Pure summary/render functions compare metadata with the previous snapshot and produce Markdown. Progress callbacks expose phase/counts without titles or authenticated URLs.
 7. The reporter replaces the dated report, `Navidrome report - latest.md`, the saved aggregate summary, then the library snapshot.
 8. The runner writes `last-run.json` only after the reporter returns successfully.
@@ -92,7 +94,7 @@ Snapshots can contain library paths, artists, titles, and playlist metadata. Tre
 
 ## Known gaps
 
-- Rust is a launcher, not the planned controller. Native idle detection, priorities, modular scheduling/cancellation, and the TUI are absent.
+- Rust is a launcher, not the planned controller. Native idle detection, priorities, and modular scheduling/cancellation are absent. The initial Python TUI is implemented.
 - Rust compilation and Task Scheduler behavior were not verified during repository preparation because the Rust toolchain was unavailable.
 - Collection checks a deadline before/after every API call, including initial calls/pagination, and caps connect/read timeouts to the remaining budget. This is cooperative; socket activity/read-timeout semantics and cancellation still require native lifecycle enforcement.
 - Known settings are type/range validated. The client validates its response envelope, HTTPS URL, and read-endpoint allowlist; some nested malformed library payloads still need stricter checks. Untrusted server error messages are not echoed.
@@ -106,13 +108,15 @@ Snapshots can contain library paths, artists, titles, and playlist metadata. Tre
 
 Future Rust work should own lightweight scheduling, Windows state observation, lifecycle/cancellation, and performance-sensitive coordination. Python should own network integrations, analysis, research, and reports. Keep jobs independently callable and testable; agree on configuration, results, and failure contracts before introducing a persistent controller.
 
-The planned TUI should expose the engine's job state, resource admission decisions, progress, and report locations without owning integration logic. It must not require elevated privileges or keep an extra service running solely for the dashboard. This is a design direction, not an implemented interface or chosen technology.
+The TUI exposes saved overview/statistics, formats/diagnostics, job state/history/output, reports, and errors across five keyboard-accessible tabs. Saved summaries are preferred; legacy snapshots are summarized locally and cached by file signature. Malformed/missing state becomes unavailable data. Reports are limited to the configured output tree and 512 KiB previews; links do not open automatically.
 
-Repository maintenance, local music/FL Studio analysis, research, backups, system maintenance, historical analytics, and a TUI are plans, not implemented modules. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
+Opening or refreshing the dashboard never starts collection. N explicitly launches the Python `report` command as a hidden Windows subprocess with streamed output. A UI guard and engine OS lock prevent duplicate work. X stops only a process owned by that dashboard; Q waits for completion or explicit cancellation. Other scheduled/background processes are not owned or cancelled by the UI. Events after forced termination can be stale and are labeled as last-recorded state. No additional service is installed.
+
+Repository maintenance, local music/FL Studio analysis, research, backups, system maintenance, and historical analytics remain planned modules. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
 
 ## Validation and documentation maintenance
 
-There are 31 passing offline Python tests, including configuration failures, Windows OS locking, atomic-write failure, naming, error redaction, initial-call time budgets, and historical-secret detection. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
+There are 40 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
 
 Public repository: `https://github.com/vxsp/nyx`, branch `main`, remote `origin`. Initial publication was verified by comparing all 26 remote file paths/blob hashes with the published local tree. Every push requires a redacted candidate/history audit.
 

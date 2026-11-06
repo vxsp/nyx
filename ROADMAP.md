@@ -6,7 +6,7 @@ This file is the primary task queue. Read it with `AGENTS.md`, `ARCHITECTURE.md`
 
 ## Baseline and reference measurements
 
-Implemented: read-only Navidrome reporting, metadata diagnostics, duplicate candidates, previous-snapshot comparison, Markdown reports/JSON state, Python admission checks, one-shot Rust launcher source, and PowerShell setup/task helpers. There are 15 passing offline Python tests. Rust compilation and Windows idle/AC scheduling are unverified.
+Implemented: read-only Navidrome reporting, metadata diagnostics, duplicate candidates, previous-snapshot comparison, Markdown reports/JSON state, Python admission checks, one-shot Rust launcher source, and PowerShell setup/task helpers. There are 40 passing offline Python tests, including headless dashboard and synthetic real-process tests. Rust compilation and Windows idle/AC scheduling are unverified.
 
 Owner-reported first run at `https://vxsp.pikapod.net`: 1,736 tracks, 398 albums, 214 artists, 12 playlists, 5.97 GiB indexed sizes; 1,253 M4A, 476 MP3, 4 FLAC, 3 WAV; 1,006 missing track numbers, 20 missing artwork references, 3 duplicate candidate groups; collection took 46 seconds. These approved aggregates are historical observations, never hardcoded live results or test expectations. Detailed reports and snapshots stay private.
 
@@ -24,29 +24,32 @@ Owner-reported first run at `https://vxsp.pikapod.net`: 1,736 tracks, 398 albums
 
 Do not publish credentials, private reports, snapshots, or media. An ignored local credential alone is not a blocker. Exposed credentials in tracked history/publication material require intervention. Preserve history, never force-push over unrelated work, and do not add a license without approval.
 
-## B: improved Navidrome reporting — next
+## B: improved Navidrome reporting — initial increment implemented
 
 - [x] Use `Navidrome report - YYYY-MM-DD.md` and `Navidrome report - latest.md` under `Navidrome/`; retain snapshots, add a compact saved summary, preserve old reports.
-- [ ] Improve availability/scan reporting, library counts, formats, metadata/artwork diagnostics, duplicate candidates, and historical changes using actual API data.
+- [x] Preserve existing counts/formats/metadata/artwork/duplicate/change diagnostics; show missing scan status as unavailable, reference the comparison snapshot timestamp, and expose saved summaries to the UI.
 - [x] Add safe error/progress feedback, a read-endpoint allowlist, and collection-wide cooperative deadlines including pagination; keep sequential requests and existing gentle pauses.
 - [x] Cover read endpoints, limits, initial-call budgets, redaction, failures, partial writes, naming, and old-report preservation with offline tests. Multi-page and malformed nested payload coverage remains to extend.
-- [ ] Investigate measured performance improvements; retain read-only operation.
+- [x] Avoid redundant album requests/counted tracks by deduplicating API IDs; add multi-page regression coverage. No new requests/concurrency or unmeasured speedup claims. Live performance measurements remain pending.
 
 Acceptance: useful, correctly named reports and snapshots; explicit incomplete/unavailable data; failures preserve usable state; no music/server mutation or fabricated metrics. New filenames are implemented; old files remain untouched. In-flight socket reads are not a hard process time limit.
 
-## C: interactive TUI — planned
+## C: interactive TUI — initial version implemented
 
 Use Python Textual initially unless inspection demonstrates a stronger reason for Ratatui. Keep UI independent of execution logic.
 
-- [ ] Overview, saved Navidrome statistics, diagnostics, job status, task history.
-- [ ] Reports browser, error logs, keyboard navigation, refresh controls.
-- [ ] Manual job execution with progress/error feedback and no duplicate launch.
-- [ ] Load saved state on startup; never require or start a fresh scan just to open the UI.
-- [ ] Headless navigation/execution tests and native Windows launch validation.
+- [x] Overview, saved Navidrome statistics, diagnostics, job status, bounded task history.
+- [x] Reports browser with legacy support/bounded previews, error logs, keyboard navigation, saved-only refresh.
+- [x] Manual CLI subprocess with streamed progress/error feedback, UI duplicate guard, shared job lock, owned-process cancellation, guarded quit.
+- [x] Load saved state on startup with no network or state writes; cache legacy-snapshot summaries.
+- [x] Headless navigation/no-scan tests and real synthetic Windows child execution/cancellation passed.
+- [ ] Fresh-terminal manual UX check and explicit live server integration check; no live scan was run during development.
 
 Acceptance: a cohesive, responsive Windows terminal application with low overhead and no additional service.
 
-## D: Rust background controller — planned
+## D: Rust background controller — blocked on native toolchain
+
+Rust/Cargo are unavailable, and Visual Studio discovery did not find the required MSVC C++ tools. Prerequisites and the validation checklist are documented; no uncompiled controller or unattended task was introduced. Continue safe independent work while these prerequisites are unresolved.
 
 Implement native idle detection (approximately 10 minutes), CPU/RAM monitoring, AC-aware admission, priorities, cooldowns, lifecycle management, single-instance locking, resource budgets, cancellation, persistent state, and resumable useful progress.
 
@@ -78,4 +81,4 @@ For each coherent increment: inspect, implement, test, fix failures, review scop
 
 If blocked, record the cause and continue safe independent tasks. At the end of a session leave an accurate checkpoint; do not claim work continues after the session ends.
 
-Current sequence: finish secure publication; complete the minimum foundation reliability needed for B; implement B, then C. Remaining native-Rust prerequisites may be documented while safe Python work continues.
+Current checkpoint: publication and initial B/C increments verified; native D is blocked on Rust/MSVC prerequisites. Keep B/C integration/performance follow-ups explicit. Next safe independent increment is E (Nyx Dev), starting with configured repositories and bounded, opt-in check commands. Do not enable unattended jobs.

@@ -2,7 +2,7 @@
 
 Nyx is a personal Windows 11 automation project built with Rust and Python. It targets an Intel i3-1115G4 laptop with 16 GB RAM, prioritizing low resource use, read-only integrations, and maintainable modules.
 
-Version 0.1 implements a Navidrome library reporter and a one-shot Rust launcher. Windows Task Scheduler supplies idle scheduling. The existing reporter has generated a real report successfully; its credentials, reports, and library snapshots stay outside Git.
+Version 0.1 implements a Navidrome library reporter, an optional Textual dashboard, and a one-shot Rust launcher. Windows Task Scheduler supplies idle scheduling. The existing reporter has generated a real report successfully; its credentials, reports, and library snapshots stay outside Git.
 
 ## Development status
 
@@ -17,7 +17,8 @@ Version 0.1 implements a Navidrome library reporter and a one-shot Rust launcher
 | PowerShell setup and idle-task registration | Scripts present; registration unverified during preparation |
 | Native Rust idle detection, modular scheduling, cancellation | Planned |
 | Repository maintenance, research, music/FL Studio analysis | Planned |
-| Incremental backups, system maintenance, historical analytics, TUI | Planned |
+| Interactive Textual dashboard reading saved state | Implemented initial version; headless Windows tests passed |
+| Incremental backups, system maintenance, historical analytics | Planned |
 
 Nyx accesses an existing Navidrome server; it does not install or host one. Current comparison uses the last complete snapshot, not a historical analytics database.
 
@@ -91,6 +92,32 @@ Shared defaults in `config/settings.json`:
 
 Resource checks occur once; they do not throttle an active job. All API calls and pagination share a cooperative deadline with bounded request timeouts; this is not a hard process execution limit. Invalid known configuration fields fail before requests are sent.
 
+## Interactive dashboard
+
+Install the optional interface and open it from the project root:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-tui.txt
+.\.venv\Scripts\python.exe main.py tui
+```
+
+The dashboard reads saved statistics/snapshots, diagnostics, job history, reports, and redacted error logs. It supports the original saved snapshot and report names; a new scan is not required just to open it. No extra service is installed.
+
+| Key | Action |
+| --- | --- |
+| 1-5 | Overview, library, jobs/history, reports, errors |
+| R | Reload saved files only |
+| N | Explicit manual report (bypasses admission checks; holds job lock) |
+| X | Cancel only the dashboard-owned manual process |
+| Q | Quit; guarded while an owned report runs |
+| Tab / arrows / Enter | Navigate controls and select reports |
+
+Manual job output streams into the Jobs tab. Existing scheduled jobs are independent; the dashboard cannot cancel them. Saved running state may be stale after a crash. The report browser includes legacy files and disables automatic link opening. Fresh-machine terminal appearance and a new live Navidrome run remain manual integration checks.
+
+![Nyx dashboard preview with synthetic demo data](docs/assets/dashboard.svg)
+
+Core scheduled reporting does not require Textual. Dashboard tests skip if the optional dependency is absent.
+
 ## Optional Rust launcher and idle task
 
 ```powershell
@@ -128,7 +155,10 @@ nyx/
     navidrome.py            API, collection, analysis, reports
   src/main.rs               One-shot Rust launcher
   Cargo.toml                Rust manifest; no external dependencies
-  requirements.txt          Python dependency ranges
+  requirements.txt          Core Python dependency ranges
+  requirements-tui.txt      Optional pinned Textual dependency
+  nyx/                      Configuration, runtime, logging, saved data, TUI
+  docs/                     Development log, Windows checklist, demo preview
   config/
     .env.example            Safe template
     settings.json           Shared defaults
@@ -154,4 +184,4 @@ Writes are atomic per file, not across all output files; interruption can leave 
 
 Public repository: [vxsp/nyx](https://github.com/vxsp/nyx). Run `.venv\Scripts\python.exe scripts/check-secrets.py` before a push. The audit supplements review and permits ignored, untracked local credentials.
 
-The next milestone is the saved-state Textual dashboard. Rust build/idle lifecycle prerequisites and validation remain documented in [docs/WINDOWS_VALIDATION.md](docs/WINDOWS_VALIDATION.md). See [ARCHITECTURE.md](ARCHITECTURE.md).
+The initial saved-state Textual dashboard is implemented. Next is native Rust controller work after its compiler prerequisites are available. Rust build/idle lifecycle prerequisites and validation remain documented in [docs/WINDOWS_VALIDATION.md](docs/WINDOWS_VALIDATION.md). See [ARCHITECTURE.md](ARCHITECTURE.md).

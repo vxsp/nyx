@@ -18,3 +18,12 @@
 - Added a repeatable redacted pre-push audit and a regression test detecting a removed credential-shaped value in historical commits. Audits supplement review, not proof of secret absence.
 - Validation: 31 offline tests passed; dependency check passed. No live server requests or personal report writes were used for this increment. The Rust toolchain remains unavailable; native setup/lifecycle checklist is in `docs/WINDOWS_VALIDATION.md`.
 - Remaining limits: cross-file writes are not transactional; native resource/activity enforcement, strict nested API validation, measured performance, and multi-page coverage need further work. Next: Textual dashboard consuming saved state, with explicit manual execution and headless tests.
+
+## 2026-11-05: initial interactive dashboard
+
+- Added optional pinned Textual 8.2.8, separate from core reporting dependencies. The dashboard provides overview, formats/diagnostics, jobs/history/output, report browsing, and error logs with keyboard controls.
+- Startup/refresh only read saved files. Existing private snapshots/reports work without a fresh scan; legacy summaries are cached. Explicit manual execution uses a separate CLI process and the shared lock; cancellation targets only the dashboard-owned process and quit is guarded.
+- Added multi-page/deduplication and missing-ID collection checks, avoiding redundant album requests while keeping requests sequential/read-only. Comparisons identify the previous snapshot timestamp.
+- Validation: 40 offline tests passed, including real native Windows synthetic process execution, duplicate prevention, cancellation, navigation, malformed data, and no network on startup/refresh; pip consistency and redacted audit passed. A 120x36 SVG preview uses synthetic demo data only.
+- Preserved concurrent local commit `981bfca`; reliability follow-up `bac84f8` was pushed without rewriting history.
+- D blocker: no Rust/Cargo; Visual Studio discovery found no required MSVC C++ tools. See `docs/WINDOWS_VALIDATION.md`. No unattended scheduling activated. Native terminal appearance/live server refresh and measured performance remain integration follow-ups. Next safe independent milestone: E, bounded configured project checks.

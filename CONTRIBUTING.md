@@ -26,7 +26,7 @@ cargo test
 git diff --check
 ```
 
-Use `unittest`, temporary directories, and `unittest.mock` without additional test dependencies. Add meaningful behavior tests, particularly for gates, read-only API usage, and failure paths that must preserve prior data. Never contact the live server, alter personal output, or register tasks during tests.
+Use `unittest`, temporary directories, and `unittest.mock`. Install `requirements-tui.txt` to run optional headless UI tests; they skip without Textual. UI tests launch only synthetic local child scripts and forbid live server access. Add meaningful behavior tests, particularly for gates, read-only API usage, and failure paths that must preserve prior data. Never contact the live server, alter personal output, or register tasks during tests.
 
 Rust currently has no unit tests. `cargo test` verifies compilation, not idle scheduling. Windows launcher/idle/AC behavior needs explicit integration validation when that flow changes. Report missing toolchains and skipped checks honestly.
 

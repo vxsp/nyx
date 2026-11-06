@@ -127,7 +127,8 @@ def collect(client: NavidromeClient, page_size: int, max_albums: int, max_second
     if progress:
         progress("connecting", 0, None)
     request("ping")
-    scan = request("getScanStatus").get("scanStatus", {})
+    raw_scan = request("getScanStatus").get("scanStatus", {})
+    scan = raw_scan if isinstance(raw_scan, dict) else {}
     artists_reply = request("getArtists").get("artists", {})
     artists = [a for group in as_list(artists_reply.get("index")) for a in as_list(group.get("artist"))]
     playlists = as_list(request("getPlaylists").get("playlists", {}).get("playlist"))
@@ -148,15 +149,28 @@ def collect(client: NavidromeClient, page_size: int, max_albums: int, max_second
         raise NavidromeError("Album safety limit reached. Increase max_albums to get complete results.")
 
     songs: list[dict] = []
+    seen_songs: set[str] = set()
+    seen_albums: set[str] = set()
+    unique_albums: list[dict] = []
     for index, album in enumerate(albums, start=1):
         if time.monotonic() - start > max_seconds:
             raise NavidromeError(f"Exceeded {max_seconds}s time budget during album retrieval.")
         album_id = cleaned(album.get("id"))
         if not album_id:
+            raise NavidromeError("Album response is missing an ID; refusing an incomplete snapshot.")
+        if album_id in seen_albums:
             continue
+        seen_albums.add(album_id)
+        unique_albums.append(album)
         data = request("getAlbum", id=album_id).get("album", {})
         for song in as_list(data.get("song")):
             song = dict(song)
+            song_id = cleaned(song.get("id"))
+            if not song_id:
+                raise NavidromeError("Track response is missing an ID; refusing an incomplete snapshot.")
+            if song_id in seen_songs:
+                continue
+            seen_songs.add(song_id)
             song.setdefault("album", album.get("name", ""))
             song.setdefault("artist", album.get("artist", ""))
             songs.append(song)
@@ -172,7 +186,7 @@ def collect(client: NavidromeClient, page_size: int, max_albums: int, max_second
         "server": client.base,
         "scan": scan,
         "artists": artists,
-        "albums": albums,
+        "albums": unique_albums,
         "songs": songs,
         "playlists": playlists,
         "duration_seconds": round(time.monotonic() - start, 1),
@@ -237,6 +251,7 @@ def summarize(current: dict, previous: dict) -> dict:
         "added_tracks": [s for s in songs if cleaned(s.get("id")) in added],
         "removed_count": len(removed),
         "has_previous": bool(previous),
+        "previous_captured_at": previous.get("captured_at"),
     }
 
 
@@ -282,6 +297,7 @@ def render(current: dict, summary: dict) -> str:
         lines.append("- None found under this heuristic.")
     lines.extend(["", "## Library changes", ""])
     if summary["has_previous"]:
+        lines.append(f"- Compared with snapshot: {mark(summary.get('previous_captured_at') or 'timestamp unavailable')}")
         lines.append(f"- Added track IDs since last complete snapshot: {len(summary['added_tracks'])}")
         lines.append(f"- Removed track IDs since last complete snapshot: {summary['removed_count']}")
         for song in summary["added_tracks"][:15]:

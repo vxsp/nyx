@@ -1,0 +1,3 @@
+-r requirements.txt
+# Optional dashboard dependency; core scheduled reporting does not import it.
+textual==8.2.8

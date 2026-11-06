@@ -26,7 +26,7 @@ The initial Navidrome reporter already works. The owner supplied this first-repo
 - Keep resource use low and dependencies minimal. Do not add unnecessary resident services.
 - Music operations are read-only by default, both for Navidrome and future local/FL Studio work. Moving, renaming, retagging, deleting, or deduplicating files requires explicit scope and approval for destructive actions.
 - The reporter writes `Navidrome report - YYYY-MM-DD.md` and `Navidrome report - latest.md`. Preserve historical date-only/`Latest.md` files; do not rename or remove them automatically.
-- Build a visual terminal interface using Python Textual initially; keep it separate from the engine and read saved state without scanning on startup.
+- The initial Python Textual dashboard is implemented (`main.py tui`, optional `requirements-tui.txt`). Keep it separate from the engine; startup/refresh read saved data only. Manual N starts a locked CLI subprocess; X cancels only its owned process, and Q is guarded while that job runs.
 - Preserve working code, private configuration, reports, and snapshots. Work through authorized milestones in verified increments rather than rebuilding the starter.
 
 ## Runtime boundaries
