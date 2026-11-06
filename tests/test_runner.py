@@ -62,7 +62,8 @@ class RunnerTests(unittest.TestCase):
             self.assertTrue(runner.resource_check({})[0])
 
     def test_disabled_run_does_not_dispatch(self):
-        with patch("sys.argv", ["main.py", "run"]), \
+        with TemporaryDirectory() as folder, patch.object(runner, "ROOT", Path(folder)), \
+                patch("sys.argv", ["main.py", "run"]), \
                 patch.object(runner, "settings", return_value={"navidrome": {"enabled": False}}), \
                 patch.object(runner, "run_report") as report, \
                 patch.object(runner, "resource_check") as check, redirect_stdout(io.StringIO()):

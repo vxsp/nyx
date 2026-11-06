@@ -64,9 +64,9 @@ Read-only music/FL Studio inventory, duplicate candidates, naming and metadata d
 
 Configured RSS/release monitoring, article deduplication, categorized Markdown digests, and reading history. Bound fetch/execution budgets; record sources and timestamps; do not add paid services without approval.
 
-## H: backups and maintenance — planned
+## H: backups and maintenance — scrapped
 
-Incremental Restic backups, verification/restore checks, disk-space/large-file analysis, maintenance reports, configurable retention. Never delete originals or permanently purge backups without explicit approval. Validate resolved Windows paths and keep destinations private.
+Incremental Restic backups scrapped, verification/restore checks, disk-space/large-file analysis, maintenance reports, configurable retention. Never delete originals or permanently purge backups without explicit approval. Validate resolved Windows paths and keep destinations private. scrapped dont do this one
 
 ## I: Nyx Insights — planned
 

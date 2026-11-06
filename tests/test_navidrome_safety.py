@@ -21,6 +21,66 @@ def snapshot():
 
 
 class NavidromeSafetyTests(unittest.TestCase):
+    def test_report_names_summary_and_old_reports_preserved(self):
+        with TemporaryDirectory() as folder:
+            root = Path(folder)
+            old = root / "reports" / "Navidrome" / "Latest.md"
+            old.parent.mkdir(parents=True)
+            old.write_text("old report", encoding="utf-8")
+            with patch.object(navidrome, "NavidromeClient"), \
+                    patch.object(navidrome, "collect", return_value=snapshot()), \
+                    patch.dict(os.environ, {"NYX_REPORT_DIR": str(root / "reports")}):
+                output = navidrome.run_report(root, {})
+            self.assertRegex(output.name, r"^Navidrome report - \d{4}-\d{2}-\d{2}\.md$")
+            self.assertTrue(output.exists())
+            self.assertTrue((output.parent / "Navidrome report - latest.md").exists())
+            self.assertEqual(old.read_text(), "old report")
+            self.assertEqual(json.loads((root / "state" / "navidrome-summary.json").read_text())["tracks"], 0)
+            self.assertTrue((root / "state" / "navidrome-last.json").exists())
+
+    def test_api_error_body_cannot_echo_secret(self):
+        with patch.object(navidrome.requests, "Session") as session:
+            session.return_value.get.return_value.json.return_value = {
+                "subsonic-response": {"status": "failed", "error": {"code": 40, "message": "synthetic-private-value"}}
+            }
+            client = navidrome.NavidromeClient("https://navidrome.example.com", "test-user", "test-password")
+            with self.assertRaises(navidrome.NavidromeError) as error:
+                client.get("ping")
+            self.assertNotIn("synthetic-private-value", str(error.exception))
+            self.assertIn("40", str(error.exception))
+            with self.assertRaises(navidrome.NavidromeError):
+                client.get("startScan")
+            self.assertEqual(session.return_value.get.call_count, 1)
+
+    def test_malformed_api_payload_is_controlled_error(self):
+        with patch.object(navidrome.requests, "Session") as session:
+            session.return_value.get.return_value.json.return_value = {"subsonic-response": []}
+            client = navidrome.NavidromeClient("https://navidrome.example.com", "test-user", "test-password")
+            with self.assertRaises(navidrome.NavidromeError):
+                client.get("ping")
+
+    def test_time_budget_includes_initial_requests(self):
+        now = [0.0]
+        client = Mock()
+        def response(endpoint, **kwargs):
+            now[0] += 2
+            return {}
+        client.get.side_effect = response
+        with patch.object(navidrome.time, "monotonic", side_effect=lambda: now[0]):
+            with self.assertRaisesRegex(navidrome.NavidromeError, "collection time budget"):
+                navidrome.collect(client, 200, 2000, 3)
+        self.assertEqual(client.get.call_count, 2)
+
+    def test_atomic_replace_failure_preserves_old_file_and_cleans_temp(self):
+        with TemporaryDirectory() as folder:
+            path = Path(folder) / "report.md"
+            path.write_text("old", encoding="utf-8")
+            with patch.object(navidrome.os, "replace", side_effect=OSError("synthetic failure")):
+                with self.assertRaises(OSError):
+                    navidrome.atomic_write(path, "new")
+            self.assertEqual(path.read_text(), "old")
+            self.assertEqual(list(Path(folder).glob("*.tmp")), [])
+
     def test_https_and_credentials_required(self):
         for url, user, password in (
             ("http://navidrome.example.com", "test-user", "test-password"),
@@ -92,7 +152,7 @@ class NavidromeSafetyTests(unittest.TestCase):
             original_write = navidrome.atomic_write
 
             def fail_latest(path, content):
-                if path.name == "Latest.md":
+                if path.name == "Navidrome report - latest.md":
                     raise OSError("synthetic write failure")
                 original_write(path, content)
 

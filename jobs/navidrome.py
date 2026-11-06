@@ -9,8 +9,10 @@ import os
 from pathlib import Path
 import re
 import secrets
+import tempfile
 import time
-from typing import Any
+from typing import Any, Callable
+from urllib.parse import urlsplit
 
 import requests
 
@@ -47,10 +49,19 @@ def mark(value: Any) -> str:
 
 
 class NavidromeClient:
+    READ_ENDPOINTS = {"ping", "getScanStatus", "getArtists", "getPlaylists", "getAlbumList2", "getAlbum"}
+
     def __init__(self, url: str, username: str, password: str, timeout: int = 12):
         self.base = url.rstrip("/")
-        if not self.base.startswith("https://"):
-            raise NavidromeError("Navidrome URL must use HTTPS.")
+        try:
+            parsed = urlsplit(self.base)
+            valid = parsed.scheme == "https" and parsed.hostname and not (
+                parsed.username or parsed.password or parsed.query or parsed.fragment
+            )
+        except ValueError:
+            valid = False
+        if not valid:
+            raise NavidromeError("Navidrome URL must use HTTPS without embedded credentials, query, or fragment.")
         if not username or not password:
             raise NavidromeError("Set NAVIDROME_USERNAME and NAVIDROME_PASSWORD in config/.env.")
         self.username = username
@@ -59,7 +70,9 @@ class NavidromeClient:
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": "Nyx/0.1 (read-only library reporting)"})
 
-    def get(self, endpoint: str, **kwargs: Any) -> dict:
+    def get(self, endpoint: str, *, remaining_seconds: float | None = None, **kwargs: Any) -> dict:
+        if endpoint not in self.READ_ENDPOINTS:
+            raise NavidromeError("Only the reporter's read-only API endpoints are allowed.")
         salt = secrets.token_hex(8)
         token = md5((self.password + salt).encode("utf-8")).hexdigest()
         params = {
@@ -69,44 +82,65 @@ class NavidromeClient:
         try:
             response = self.session.get(
                 f"{self.base}/rest/{endpoint}.view", params=params,
-                timeout=(5, self.timeout),
+                timeout=(min(5, remaining_seconds) if remaining_seconds is not None else 5,
+                         min(self.timeout, remaining_seconds) if remaining_seconds is not None else self.timeout),
             )
             response.raise_for_status()
             document = response.json()
         except (requests.RequestException, ValueError) as exc:
             # Avoid including a URL with the authenticated query parameters in errors.
             raise NavidromeError(f"{endpoint} request failed (network/server error).") from None
-        payload = document.get("subsonic-response", {})
+        payload = document.get("subsonic-response", {}) if isinstance(document, dict) else {}
+        if not isinstance(payload, dict):
+            raise NavidromeError(f"{endpoint} returned an invalid API response.")
         if payload.get("status") != "ok":
             error = payload.get("error", {})
-            raise NavidromeError(
-                f"{endpoint} failed: {cleaned(error.get('message')) or 'unknown API error'}"
-            )
+            code = error.get("code") if isinstance(error, dict) else None
+            label = str(code) if isinstance(code, int) and not isinstance(code, bool) else "unknown"
+            # Server messages are untrusted and may echo credentials/query parameters.
+            raise NavidromeError(f"{endpoint} failed (API error {label}). Check server availability and account access.")
         return payload
 
 
 def load_previous(path: Path) -> dict:
     try:
-        return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        value = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        if not isinstance(value, dict) or not isinstance(value.get("songs", []), list):
+            return {}
+        return value
     except (json.JSONDecodeError, OSError):
         return {}
 
 
-def collect(client: NavidromeClient, page_size: int, max_albums: int, max_seconds: int) -> dict:
+def collect(client: NavidromeClient, page_size: int, max_albums: int, max_seconds: int,
+            progress: Callable[[str, int, int | None], None] | None = None) -> dict:
     start = time.monotonic()
-    client.get("ping")
-    scan = client.get("getScanStatus").get("scanStatus", {})
-    artists_reply = client.get("getArtists").get("artists", {})
+    def request(endpoint: str, **params) -> dict:
+        remaining = max_seconds - (time.monotonic() - start)
+        if remaining <= 0:
+            raise NavidromeError(f"Exceeded {max_seconds}s collection time budget.")
+        result = client.get(endpoint, remaining_seconds=remaining, **params)
+        if time.monotonic() - start > max_seconds:
+            raise NavidromeError(f"Exceeded {max_seconds}s collection time budget.")
+        return result
+
+    if progress:
+        progress("connecting", 0, None)
+    request("ping")
+    scan = request("getScanStatus").get("scanStatus", {})
+    artists_reply = request("getArtists").get("artists", {})
     artists = [a for group in as_list(artists_reply.get("index")) for a in as_list(group.get("artist"))]
-    playlists = as_list(client.get("getPlaylists").get("playlists", {}).get("playlist"))
+    playlists = as_list(request("getPlaylists").get("playlists", {}).get("playlist"))
     albums: list[dict] = []
     offset = 0
     while offset < max_albums:
-        page = as_list(client.get(
+        page = as_list(request(
             "getAlbumList2", type="alphabeticalByName",
             size=min(page_size, max_albums - offset), offset=offset,
         ).get("albumList2", {}).get("album"))
         albums.extend(page)
+        if progress:
+            progress("album index", len(albums), None)
         if len(page) < min(page_size, max_albums - offset):
             break
         offset += len(page)
@@ -120,14 +154,18 @@ def collect(client: NavidromeClient, page_size: int, max_albums: int, max_second
         album_id = cleaned(album.get("id"))
         if not album_id:
             continue
-        data = client.get("getAlbum", id=album_id).get("album", {})
+        data = request("getAlbum", id=album_id).get("album", {})
         for song in as_list(data.get("song")):
             song = dict(song)
             song.setdefault("album", album.get("name", ""))
             song.setdefault("artist", album.get("artist", ""))
             songs.append(song)
         if index % 20 == 0:
+            if progress:
+                progress("album tracks", index, len(albums))
             time.sleep(0.1)  # gentle on a remote server
+    if progress:
+        progress("collected", len(albums), len(albums))
 
     return {
         "captured_at": utc_now(),
@@ -184,7 +222,7 @@ def summarize(current: dict, previous: dict) -> dict:
     duplicate_candidates.sort(key=lambda group: (-len(group), normalized(group[0].get("title"))))
 
     current_ids = {cleaned(i.get("id")) for i in songs if i.get("id")}
-    previous_ids = {cleaned(i.get("id")) for i in previous.get("songs", []) if i.get("id")}
+    previous_ids = {cleaned(i.get("id")) for i in as_list(previous.get("songs")) if i.get("id")}
     added = current_ids - previous_ids if previous else set()
     removed = previous_ids - current_ids if previous else set()
     return {
@@ -219,7 +257,7 @@ def render(current: dict, summary: dict) -> str:
         f"| Data collection | {current['duration_seconds']:.1f} seconds |", "",
         "## Server and scan", "",
         "- API authentication and ping: successful",
-        f"- Currently scanning: {'yes' if scan.get('scanning') else 'no'}",
+        f"- Currently scanning: {('yes' if scan['scanning'] else 'no') if isinstance(scan.get('scanning'), bool) else 'unavailable'}",
         f"- Scan progress count (server-reported): {scan.get('count', 'unavailable')}",
         f"- Last scan (server-reported): {mark(scan.get('lastScan') or 'unavailable')}", "",
         "## Audio formats", "",
@@ -261,12 +299,20 @@ def render(current: dict, summary: dict) -> str:
 
 def atomic_write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(content, encoding="utf-8")
-    os.replace(tmp, path)
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
+                                         prefix=path.name + ".", suffix=".tmp", delete=False) as handle:
+            tmp = Path(handle.name)
+            handle.write(content)
+        os.replace(tmp, path)
+    finally:
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)  # Only our own newly created temporary file.
 
 
-def run_report(project_dir: Path, settings: dict) -> Path:
+def run_report(project_dir: Path, settings: dict,
+               progress: Callable[[str, int, int | None], None] | None = None) -> Path:
     config = settings.get("navidrome", {})
     url = os.environ.get("NAVIDROME_URL", "https://vxsp.pikapod.net")
     client = NavidromeClient(
@@ -277,6 +323,7 @@ def run_report(project_dir: Path, settings: dict) -> Path:
         client, int(config.get("page_size", 200)),
         int(config.get("max_albums", 2000)),
         int(config.get("max_report_seconds", 600)),
+        progress=progress,
     )
     previous_path = project_dir / "state" / "navidrome-last.json"
     previous = load_previous(previous_path)
@@ -284,10 +331,18 @@ def run_report(project_dir: Path, settings: dict) -> Path:
     output = render(current, summary)
     report_dir = Path(os.getenv("NYX_REPORT_DIR") or str(project_dir / "reports")).expanduser()
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
-    dated_path = report_dir / "Navidrome" / f"{today}.md"
-    latest_path = report_dir / "Navidrome" / "Latest.md"
+    dated_path = report_dir / "Navidrome" / f"Navidrome report - {today}.md"
+    latest_path = report_dir / "Navidrome" / "Navidrome report - latest.md"
     atomic_write(dated_path, output)
     atomic_write(latest_path, output)
+    saved_summary = {
+        "captured_at": current["captured_at"], "duration_seconds": current["duration_seconds"],
+        "scan": current["scan"],
+        **{key: summary[key] for key in ("tracks", "albums", "artists", "playlists", "formats", "reported_file_bytes", "removed_count", "has_previous")},
+        "missing_metadata": {key: len(value) for key, value in summary["problems"].items()},
+        "duplicate_groups": len(summary["duplicate_candidates"]), "added_count": len(summary["added_tracks"]),
+    }
+    atomic_write(project_dir / "state" / "navidrome-summary.json", json.dumps(saved_summary, indent=2))
     # Only commit the snapshot when all API requests and report writes succeeded.
     atomic_write(previous_path, json.dumps(current, indent=2, ensure_ascii=False))
     return dated_path
