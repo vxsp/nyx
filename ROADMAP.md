@@ -6,7 +6,7 @@ This file is the primary task queue. Read it with `AGENTS.md`, `ARCHITECTURE.md`
 
 ## Baseline and reference measurements
 
-Implemented: read-only Navidrome reporting, metadata diagnostics, duplicate candidates, previous-snapshot comparison, Markdown reports/JSON state, Python admission checks, one-shot Rust launcher source, and PowerShell setup/task helpers. There are 40 passing offline Python tests, including headless dashboard and synthetic real-process tests. Rust compilation and Windows idle/AC scheduling are unverified.
+Implemented: read-only Navidrome reporting, metadata diagnostics, duplicate candidates, previous-snapshot comparison, Markdown reports/JSON state, Python admission checks, one-shot Rust launcher source, and PowerShell setup/task helpers. There are 48 passing offline Python tests, including headless dashboard and synthetic real-process tests. Rust compilation and Windows idle/AC scheduling are unverified.
 
 Owner-reported first run at `https://vxsp.pikapod.net`: 1,736 tracks, 398 albums, 214 artists, 12 playlists, 5.97 GiB indexed sizes; 1,253 M4A, 476 MP3, 4 FLAC, 3 WAV; 1,006 missing track numbers, 20 missing artwork references, 3 duplicate candidate groups; collection took 46 seconds. These approved aggregates are historical observations, never hardcoded live results or test expectations. Detailed reports and snapshots stay private.
 
@@ -55,9 +55,16 @@ Implement native idle detection (approximately 10 minutes), CPU/RAM monitoring, 
 
 Acceptance: one resource-intensive job at a time; no duplicate job; constrained resources/battery prevent starts; activity cancels or safely suspends work; verify Windows behavior before enabling unattended execution. Keep existing launch paths working.
 
-## E: Nyx Dev — planned
+## E: Nyx Dev — initial version implemented
 
-Inspect configured/allowlisted repositories, run declared tests, report build health, outdated dependencies, and dirty state. Treat test commands as executable code and bound execution. Never automatically push, reset, clean, or rewrite unrelated repositories. Acceptance: useful project-health Markdown with explicit execution policy and no incidental project changes.
+- [x] Inspect only configured repository roots, with dirty-state/branch reporting and optional Git index writes/fsmonitor disabled.
+- [x] Run explicitly declared test/build/dependency/custom commands only with `dev-report --run-checks`; default reporting never executes them.
+- [x] Bound duration/output, retain safe private result tails, and generate Markdown/JSON health reports. Pip-style dependency-check JSON can report outdated counts.
+- [x] Use a shared job lock and module-tagged history; preserve Navidrome cooldown and expose Dev reports in the browser.
+- [x] Regression checks verify unchanged source/index during metadata inspection, opt-in execution, timeouts, failures/output limits, private configuration, and cooldown isolation.
+- [ ] Native Windows process containment for daemonizing check descendants and fresh-machine/user-declared project integration remain follow-ups; do not schedule Dev unattended.
+
+Never automatically fetch, install, commit, push, reset, clean, or rewrite inspected repositories. Check commands are trusted executable code and may have their own side effects. A generated report is not a claim that checks passed.
 
 ## F: Nyx Audio — planned
 
@@ -81,4 +88,4 @@ For each coherent increment: inspect, implement, test, fix failures, review scop
 
 If blocked, record the cause and continue safe independent tasks. At the end of a session leave an accurate checkpoint; do not claim work continues after the session ends.
 
-Current checkpoint: publication and initial B/C increments verified; native D is blocked on Rust/MSVC prerequisites. Keep B/C integration/performance follow-ups explicit. Next safe independent increment is E (Nyx Dev), starting with configured repositories and bounded, opt-in check commands. Do not enable unattended jobs.
+Current checkpoint: publication and initial B/C increments verified; native D is blocked on Rust/MSVC prerequisites. Keep B/C integration/performance follow-ups explicit. E now has a verified initial health reporter with opt-in checks. Next independent module is F (read-only music/FL Studio inventory); retain D containment and B/C live integration follow-ups. Do not enable unattended jobs.

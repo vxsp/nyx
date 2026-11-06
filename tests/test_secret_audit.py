@@ -31,6 +31,7 @@ class SecretAuditTests(unittest.TestCase):
 
     def test_private_files_block_but_environment_example_is_allowed(self):
         self.assertTrue(audit_module.private_path("config/.env"))
+        self.assertTrue(audit_module.private_path("config/projects.local.json"))
         self.assertTrue(audit_module.private_path("reports/Navidrome/report.md"))
         self.assertFalse(audit_module.private_path("config/.env.example"))
         self.assertFalse(audit_module.private_path("reports/.gitkeep"))

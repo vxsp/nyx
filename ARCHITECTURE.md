@@ -23,7 +23,8 @@ Accepted boundaries are native Windows without WSL/Docker, Rust for the future b
 | `nyx/logging.py` | Rotating redacted JSON logs | No server bodies/raw exceptions |
 | `nyx/saved.py` | Bounded saved-state/report/log reads and cached legacy-snapshot summaries | No network or startup writes |
 | `nyx/tui.py`, `nyx/tui.tcss` | Optional Textual views/navigation and explicit manual CLI subprocess | No resident engine or automatic startup scan |
-| `jobs/navidrome.py` | HTTPS client, collection, diagnostics, comparison, rendering, writes | Only implemented job |
+| `jobs/navidrome.py` | HTTPS client, collection, diagnostics, comparison, rendering, writes | Read-only integration |
+| `jobs/dev.py` | Configured Git health and opt-in bounded checks | No automatic execution or maintenance in other projects |
 | `config/settings.json` | Versioned resource and collection defaults | Known fields validated before work |
 | `config/.env` | Private server/login/output settings | Local only |
 | `scripts/*.ps1` | Setup, manual invocation, opt-in task registration | Registration modifies Windows state |
@@ -51,7 +52,7 @@ The launcher requires the project root as its working directory, closes child st
 
 `run` checks the enabled flag, successful-run cooldown, then resources while holding the job lock. CPU sampling waits 0.8 seconds. Checks occur once, not continuously. `report` bypasses these gates but holds the same lock and updates the successful-run timestamp. `status` reads local state without HTTP or loading settings. Malformed/naive cooldown records are treated as due.
 
-The OS file lock in `state/job.lock` serializes Python report/run processes and releases on process exit; the lock file stays on disk. Manual contention returns code 2; a scheduled contention is a successful skip. JSONL event history retains at most 500 entries; `current-job.json` records progress. A crash can leave a last-recorded running event; it is not proof a process is still active.
+The OS file lock in `state/job.lock` serializes Python Navidrome/Dev report processes and releases on process exit; the lock file stays on disk. Manual contention returns code 2; a scheduled contention is a successful skip. JSONL event history retains at most 500 entries; `current-job.json` records progress. A crash can leave a last-recorded running event; it is not proof a process is still active.
 
 The registration script uses an interactive-token account, least privilege, idle/AC conditions, stop/restart on idle changes, no waking, and a 15-minute execution limit. Ignore-new prevents overlapping scheduled instances only. Its create-or-update call can replace a task named `Nyx`; inspect it and obtain approval before replacement.
 
@@ -108,16 +109,26 @@ Snapshots can contain library paths, artists, titles, and playlist metadata. Tre
 
 Future Rust work should own lightweight scheduling, Windows state observation, lifecycle/cancellation, and performance-sensitive coordination. Python should own network integrations, analysis, research, and reports. Keep jobs independently callable and testable; agree on configuration, results, and failure contracts before introducing a persistent controller.
 
-The TUI exposes saved overview/statistics, formats/diagnostics, job state/history/output, reports, and errors across five keyboard-accessible tabs. Saved summaries are preferred; legacy snapshots are summarized locally and cached by file signature. Malformed/missing state becomes unavailable data. Reports are limited to the configured output tree and 512 KiB previews; links do not open automatically.
+The TUI exposes saved overview/statistics, formats/diagnostics, job state/history/output, reports, and errors across five keyboard-accessible tabs. Saved summaries are preferred; legacy snapshots are summarized locally and cached by file signature. Malformed/missing state becomes unavailable data. Navidrome/Dev reports are limited to the configured output tree and 512 KiB previews; links do not open automatically.
 
 Opening or refreshing the dashboard never starts collection. N explicitly launches the Python `report` command as a hidden Windows subprocess with streamed output. A UI guard and engine OS lock prevent duplicate work. X stops only a process owned by that dashboard; Q waits for completion or explicit cancellation. Other scheduled/background processes are not owned or cancelled by the UI. Events after forced termination can be stale and are labeled as last-recorded state. No additional service is installed.
 
-Repository maintenance, local music/FL Studio analysis, research, backups, system maintenance, and historical analytics remain planned modules. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
+An initial Nyx Dev health reporter is implemented; automatic maintenance is not. Local music/FL Studio analysis, research, backups, system maintenance, and historical analytics remain planned modules. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
 
 ## Validation and documentation maintenance
 
-There are 40 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
+There are 48 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
 
 Public repository: `https://github.com/vxsp/nyx`, branch `main`, remote `origin`. Initial publication was verified by comparing all 26 remote file paths/blob hashes with the published local tree. Every push requires a redacted candidate/history audit.
 
 Keep this description aligned with source changes, update milestone state in `ROADMAP.md`, and carry durable decisions into `AGENTS.md` in the same change. Recheck implementation before promoting any planned capability to completed. Unrelated ChatGPT conversations need repository access or these documents supplied explicitly to recover the context.
+
+## Nyx Dev boundary
+
+`dev-report` reads repositories configured in private `config/projects.local.json` (or the `dev.repositories` settings section). The safe example is versioned; no directories outside the configured roots are discovered. Git inspection disables optional index writes and fsmonitor commands, never fetches, and reports access/trust/unborn-history issues instead of changing repository configuration.
+
+Declared checks run only with `--run-checks`. Commands are argument arrays, never inferred shell strings; relative executable paths resolve against the target repository. Direct .bat/.cmd runners are rejected. Per-check timeouts are 1-3600 seconds, bounded by a shared 600-second report budget. Output is disk-backed with a 1 MiB stop threshold checked every 50 ms and a redacted 16 KiB saved tail. This is cooperative, not a hard disk quota. Windows timeout handling targets only the launched PID/tree; a check that daemonizes after its parent exits is not securely contained. Use trusted commands; native process containment belongs to milestone D before unattended use.
+
+Dependency checks are explicitly declared commands. Pip-style JSON can yield an outdated-package count; missing/truncated/unrecognized output is not treated as a measured count. Nyx never installs or upgrades those dependencies automatically.
+
+Reports live under `reports/Dev/`; private details go to `state/dev-last.json`, successful report paths to `dev-last-run.json`, and module-tagged events to the shared bounded history. Dev reports do not change Navidrome's cooldown. A successful report job means the report was generated, not that every project check passed; individual findings retain their own status.

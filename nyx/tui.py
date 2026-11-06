@@ -92,7 +92,7 @@ class NyxApp(App):
     def on_mount(self) -> None:
         self.query_one("#formats", DataTable).add_columns("Format", "Tracks")
         self.query_one("#diagnostics", DataTable).add_columns("Diagnostic", "Count")
-        self.query_one("#history", DataTable).add_columns("UTC", "Status", "Phase / detail")
+        self.query_one("#history", DataTable).add_columns("UTC", "Module", "Status", "Phase / detail")
         self.query_one("#report-list", DataTable).add_columns("Saved report")
         self.action_refresh_saved()
 
@@ -133,7 +133,7 @@ class NyxApp(App):
         status = self.saved.job
         owned = "Running (owned manual process)" if self.running_report else "No manual process owned by this dashboard"
         self.query_one("#job-status", Static).update(Text(
-            f"{owned}\nLast recorded state: {status.get('status', 'unavailable')} / {status.get('phase', '--')}\n"
+            f"{owned}\nLast recorded state: {status.get('module', '--')} / {status.get('status', 'unavailable')} / {status.get('phase', '--')}\n"
             f"Progress: {status.get('completed', '--')} / {status.get('total', '--')}   Recorded: {status.get('at', '--')}\n"
             "Saved running state may be stale after a crash; it does not prove an active process."
         ))
@@ -141,13 +141,13 @@ class NyxApp(App):
         history.clear()
         for event in reversed(self.saved.history):
             history.add_row(*[Text(str(value)) for value in (
-                event.get("at", "--"), event.get("status", "--"),
+                event.get("at", "--"), event.get("module", "--"), event.get("status", "--"),
                 event.get("phase") or event.get("reason") or event.get("error_type") or "--",
             )])
         reports = self.query_one("#report-list", DataTable)
         reports.clear()
         for index, path in enumerate(self.saved.reports):
-            reports.add_row(Text(path.name), key=str(index))
+            reports.add_row(Text(str(path.relative_to(self.store.report_dir))), key=str(index))
         if self._selected_report not in self.saved.reports:
             self._selected_report = next((p for p in self.saved.reports if p.name == "Navidrome report - latest.md"),
                                          self.saved.reports[0] if self.saved.reports else None)

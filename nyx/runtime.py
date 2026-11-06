@@ -49,9 +49,9 @@ def timestamp() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def record_event(root: Path, status: str, **details) -> dict:
+def record_event(root: Path, status: str, *, module: str = "navidrome", **details) -> dict:
     """Caller holds the job lock. Retain at most 500 execution events."""
-    event = {"at": timestamp(), "module": "navidrome", "status": status, **details}
+    event = {"at": timestamp(), "module": module, "status": status, **details}
     path = root / "state" / "history.jsonl"
     try:
         lines = path.read_text(encoding="utf-8").splitlines()[-499:]
@@ -63,9 +63,9 @@ def record_event(root: Path, status: str, **details) -> dict:
     return event
 
 
-def record_progress(root: Path, phase: str, completed: int, total: int | None) -> None:
+def record_progress(root: Path, phase: str, completed: int, total: int | None, *, module: str = "navidrome") -> None:
     event = {
-        "at": timestamp(), "module": "navidrome", "status": "running",
+        "at": timestamp(), "module": module, "status": "running",
         "phase": phase, "completed": completed, "total": total,
     }
     atomic_write(root / "state" / "current-job.json", json.dumps(event, indent=2))

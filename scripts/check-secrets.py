@@ -25,6 +25,7 @@ def private_path(path: str) -> bool:
     name = Path(path).name
     return (
         name == ".env" or (name.startswith(".env.") and not name.endswith(".example"))
+        or (path.startswith("config/") and ".local." in name)
         or any(part in (".venv", "target", "__pycache__") for part in parts)
         or (path.startswith(("logs/", "reports/", "state/")) and not path.endswith("/.gitkeep"))
         or Path(path).suffix.lower() in {".zip", ".7z", ".exe", ".dll", ".mp3", ".flac", ".wav", ".m4a", ".flp", ".pem", ".key"}

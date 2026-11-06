@@ -16,7 +16,8 @@ Version 0.1 implements a Navidrome library reporter, an optional Textual dashboa
 | Rust launcher forwarding one command to Python | Implemented; compilation unverified during preparation |
 | PowerShell setup and idle-task registration | Scripts present; registration unverified during preparation |
 | Native Rust idle detection, modular scheduling, cancellation | Planned |
-| Repository maintenance, research, music/FL Studio analysis | Planned |
+| Configured project health, test/build/dependency checks | Implemented initial Nyx Dev; commands require explicit opt-in |
+| Automatic repository maintenance, research, music/FL Studio analysis | Planned |
 | Interactive Textual dashboard reading saved state | Implemented initial version; headless Windows tests passed |
 | Incremental backups, system maintenance, historical analytics | Planned |
 
@@ -91,6 +92,23 @@ Shared defaults in `config/settings.json`:
 | Album retrieval budget | 600 seconds |
 
 Resource checks occur once; they do not throttle an active job. All API calls and pagination share a cooperative deadline with bounded request timeouts; this is not a hard process execution limit. Invalid known configuration fields fail before requests are sent.
+
+## Nyx Dev project health
+
+Keep repository paths and check commands private. Copy `config/projects.example.json` to ignored `config/projects.local.json`, replace the placeholder root with an explicitly selected repository, and review its command arrays.
+
+```powershell
+# Read Git metadata only; declared project commands are not executed:
+.\.venv\Scripts\python.exe main.py dev-report
+# Explicitly run the configured tests/build/dependency checks:
+.\.venv\Scripts\python.exe main.py dev-report --run-checks
+```
+
+No configured repositories means an actionable empty report, not a scan of your drive. Nyx never automatically fetches, installs, upgrades, commits, pushes, resets, or cleans other projects. Opted-in commands execute project code and can have their own side effects. Use trusted executable runners, not direct .bat/.cmd scripts.
+
+Results include branch/dirty state, per-check status, bounded output, and pip-style outdated-package counts when a declared dependency check returns valid JSON. Reports stay under `reports/Dev/` and appear in the dashboard browser; private JSON details are in `state/dev-last.json`. Navidrome cooldown is unaffected. A successfully generated report can contain failed checks.
+
+Checks have individual timeouts within a 600-second total budget. Capture stops near 1 MiB (sampled every 50 ms), saving only a redacted 16 KiB tail. Windows termination targets the launched active process tree; commands that daemonize after their parent exits are not securely contained. Unattended Dev execution remains disabled pending the native controller.
 
 ## Interactive dashboard
 

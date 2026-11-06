@@ -1,0 +1,22 @@
+{
+  "repositories": [
+    {
+      "name": "Example project",
+      "path": "C:/path/to/project",
+      "checks": [
+        {
+          "name": "Python unit tests",
+          "kind": "test",
+          "command": [".venv/Scripts/python.exe", "-m", "unittest", "discover", "-s", "tests", "-q"],
+          "timeout_seconds": 120
+        },
+        {
+          "name": "Outdated Python packages",
+          "kind": "dependencies",
+          "command": [".venv/Scripts/python.exe", "-m", "pip", "list", "--outdated", "--format=json"],
+          "timeout_seconds": 60
+        }
+      ]
+    }
+  ]
+}

@@ -27,3 +27,11 @@
 - Validation: 40 offline tests passed, including real native Windows synthetic process execution, duplicate prevention, cancellation, navigation, malformed data, and no network on startup/refresh; pip consistency and redacted audit passed. A 120x36 SVG preview uses synthetic demo data only.
 - Preserved concurrent local commit `981bfca`; reliability follow-up `bac84f8` was pushed without rewriting history.
 - D blocker: no Rust/Cargo; Visual Studio discovery found no required MSVC C++ tools. See `docs/WINDOWS_VALIDATION.md`. No unattended scheduling activated. Native terminal appearance/live server refresh and measured performance remain integration follow-ups. Next safe independent milestone: E, bounded configured project checks.
+
+## 2026-11-05: initial Nyx Dev health reporting
+
+- Added configured repository-only Git inspection and explicitly opted-in test/build/dependency/custom command execution. No drive discovery or automatic changes to unrelated projects; real user repositories were not run during tests.
+- Added private configuration with a safe example, 600-second job budget, per-check limits, disk-backed bounded output/tails, timeout tree termination, and pip-style outdated-count parsing without installing/upgrading dependencies.
+- Added Dev Markdown/JSON reports, separate last-success state, module-tagged history/progress, and report-browser support. Metadata-only tests verify source and Git index bytes remain unchanged; Navidrome cooldown isolation is tested.
+- Validation: 48 offline tests passed; pip consistency and secret audit passed. Remaining limitation: daemonized descendants after the parent exits need native Windows containment (D); declared checks remain trusted/opt-in with no unattended activation.
+- Checkpoint: public main includes the initial dashboard (`4ec74fc`); this increment follows with preserved history. D remains blocked on Rust/MSVC. Next independent task is F's read-only inventory, while native/live integration follow-ups remain explicit.
