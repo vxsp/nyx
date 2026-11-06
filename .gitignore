@@ -33,6 +33,7 @@ dist/
 
 # Rust output. Commit Cargo.lock when generated for this application.
 target/
+/.tools/
 
 # Private runtime output; retain only directory markers.
 /state/*

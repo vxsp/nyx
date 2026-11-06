@@ -12,6 +12,7 @@ import time
 from jobs.navidrome import atomic_write, mark, utc_now
 from nyx.config import ConfigurationError
 from nyx.logging import redact
+from nyx.processes import launch_check
 
 
 def repositories(root: Path, settings: dict) -> list[dict]:
@@ -56,16 +57,12 @@ def repositories(root: Path, settings: dict) -> list[dict]:
     return result
 
 
-def stop_tree(process: subprocess.Popen) -> None:
+def stop_tree(process) -> None:
     """Stop only the process tree launched by this check."""
     if process.poll() is not None:
         return
     if os.name == "nt":
-        try:
-            subprocess.run(["taskkill.exe", "/PID", str(process.pid), "/T", "/F"],
-                           capture_output=True, timeout=10, check=False)
-        except (OSError, subprocess.TimeoutExpired):
-            pass
+        process.kill()  # The owned Windows Job Object includes every contained descendant.
     else:
         import signal
         try:
@@ -74,7 +71,7 @@ def stop_tree(process: subprocess.Popen) -> None:
             pass
     if process.poll() is None:
         process.kill()
-    process.wait()
+    process.wait(timeout=5)
 
 
 def run_check(path: Path, check: dict, timeout: float) -> dict:
@@ -82,40 +79,35 @@ def run_check(path: Path, check: dict, timeout: float) -> dict:
     result = {"name": check.get("name", "Check"), "kind": check.get("kind", "test"), "status": "error"}
     options = os.environ.copy()
     options.update(GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never", PYTHONDONTWRITEBYTECODE="1")
-    flags = {"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
+    options.setdefault("PYTHONIOENCODING", "utf-8")
     # Disk-backed capture avoids unbounded output held in RAM; only the tail is retained.
     with tempfile.TemporaryFile() as output:
-        process = None
         try:
             command = list(check["command"])
             if not Path(command[0]).is_absolute() and ("/" in command[0] or "\\" in command[0]):
                 command[0] = str(path / command[0])
-            process = subprocess.Popen(command, cwd=path, stdin=subprocess.DEVNULL,
-                                       stdout=output, stderr=subprocess.STDOUT, env=options, **flags)
-            deadline = started + timeout
-            while True:
-                remaining = deadline - time.monotonic()
-                if os.fstat(output.fileno()).st_size > 1024 * 1024:
-                    stop_tree(process)
-                    result["status"] = "output limit"
-                    break
-                if remaining <= 0:
-                    stop_tree(process)
-                    result["status"] = "timeout"
-                    break
-                try:
-                    code = process.wait(timeout=min(0.05, remaining))
-                    result.update(status="passed" if code == 0 else "failed", exit_code=code)
+            with launch_check(command, path, output, options) as process:
+                deadline = started + timeout
+                while True:
+                    remaining = deadline - time.monotonic()
                     if os.fstat(output.fileno()).st_size > 1024 * 1024:
+                        stop_tree(process)
                         result["status"] = "output limit"
-                    break
-                except subprocess.TimeoutExpired:
-                    continue
+                        break
+                    if remaining <= 0:
+                        stop_tree(process)
+                        result["status"] = "timeout"
+                        break
+                    try:
+                        code = process.wait(timeout=min(0.05, remaining))
+                        result.update(status="passed" if code == 0 else "failed", exit_code=code)
+                        if os.fstat(output.fileno()).st_size > 1024 * 1024:
+                            result["status"] = "output limit"
+                        break
+                    except subprocess.TimeoutExpired:
+                        continue
         except OSError as exc:
-            result["error_type"] = type(exc).__name__
-        finally:
-            if process is not None and process.poll() is None:
-                stop_tree(process)
+            result.update(status="error", error_type=type(exc).__name__)
         length = output.seek(0, os.SEEK_END)
         output.seek(max(0, length - 16384))
         text = redact(output.read(16384).decode("utf-8", errors="replace"))

@@ -31,6 +31,8 @@ Use `unittest`, temporary directories, and `unittest.mock`. Install `requirement
 
 Rust currently has no unit tests. `cargo test` verifies compilation, not idle scheduling. Windows launcher/idle/AC behavior needs explicit integration validation when that flow changes. Report missing toolchains and skipped checks honestly.
 
+Native Windows process tests launch only temporary, self-ending synthetic workers. Verify detached/breakaway descendants cannot outlive checks, timeout/runner termination cleanup, unrelated-process preservation, creation failure without fallback, Unicode I/O, and kernel-handle retention. Do not substitute real project checks or services for these fixtures. `scripts/setup-rust.ps1` is read-only without installation flags; parser/default-mode/prerequisite-guard checks do not establish that an installer has run successfully.
+
 A manual live report is an integration check that writes private data. Task registration modifies Windows state and stays opt-in. The existing registration script replaces a task named `Nyx`; inspect it and obtain approval before replacement.
 
 ## Secrets and publication

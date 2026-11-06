@@ -113,7 +113,7 @@ No configured repositories means an actionable empty report, not a scan of your 
 
 Results include branch/dirty state, per-check status, bounded output, and pip-style outdated-package counts when a declared dependency check returns valid JSON. Reports stay under `reports/Dev/` and appear in the dashboard browser; private JSON details are in `state/dev-last.json`. Navidrome cooldown is unaffected. A successfully generated report can contain failed checks.
 
-Checks have individual timeouts within a 600-second total budget. Capture stops near 1 MiB (sampled every 50 ms), saving only a redacted 16 KiB tail. Windows termination targets the launched active process tree; commands that daemonize after their parent exits are not securely contained. Unattended Dev execution remains disabled pending the native controller.
+Checks have individual timeouts within a 600-second total budget. Capture stops near 1 MiB (sampled every 50 ms), saving only a redacted 16 KiB tail. Windows checks run inside an owned Job Object from process creation. Remaining workers stop when the check completes, times out, exceeds output limits, or its Nyx runner terminates. A containment failure prevents the check from starting. Checks that intentionally leave background workers running will have those workers stopped. This controls process lifetime; commands still need to be trusted. Unattended Dev execution remains disabled pending the native controller.
 
 ## Nyx Audio inventory
 
@@ -196,6 +196,8 @@ Manual job output streams into the Jobs tab. Existing scheduled jobs are indepen
 Core scheduled reporting does not require Textual. Dashboard tests skip if the optional dependency is absent.
 
 ## Optional Rust launcher and idle task
+
+Check the native compiler prerequisites with `./scripts/setup-rust.ps1`. If missing, use `./scripts/setup-rust.ps1 -InstallBuildTools` in an Administrator PowerShell, then `./scripts/setup-rust.ps1 -InstallRust` in your normal user PowerShell. Installation is explicit; default mode only reads system state. The install paths are prepared but have not been exercised locally because administrator elevation is unavailable. See [Windows validation](docs/WINDOWS_VALIDATION.md) before building or enabling scheduling.
 
 ```powershell
 cargo build --release

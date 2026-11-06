@@ -288,14 +288,22 @@ root = pathlib.Path(__file__).parent
 launches = root / "launches.txt"
 launches.write_text(str(int(launches.read_text()) + 1) if launches.exists() else "1")
 print("Synthetic collection started", flush=True)
-time.sleep(0.8)
+deadline = time.monotonic() + 30
+while not (root / "release.txt").exists():
+    if time.monotonic() >= deadline:
+        raise SystemExit(2)
+    time.sleep(0.02)
 (root / "state").mkdir(exist_ok=True)
 (root / "state" / "navidrome-summary.json").write_text(json.dumps({"tracks": 12}))
 print("Synthetic collection complete", flush=True)
 ''', encoding="utf-8")
             app = NyxApp(root)
             async with app.run_test(size=(110, 36)) as pilot:
-                await pilot.press("n", "n")
+                try:
+                    await pilot.press("n", "n")
+                    self.assertTrue(app.running_report)
+                finally:
+                    (root / "release.txt").write_text("release", encoding="utf-8")
                 await app.workers.wait_for_complete()
                 await pilot.pause()
                 self.assertFalse(app.running_report)
