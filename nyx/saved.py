@@ -8,6 +8,7 @@ from pathlib import Path
 
 from jobs.navidrome import summarize
 from nyx.logging import redact
+from nyx.modules import MODULES, event_module
 
 
 def read_json(path: Path) -> dict:
@@ -34,6 +35,14 @@ def tail(path: Path, limit: int = 256 * 1024) -> list[str]:
 
 
 @dataclass
+class ModuleData:
+    snapshot: dict = field(default_factory=dict)
+    last_run: dict = field(default_factory=dict)
+    history: list[dict] = field(default_factory=list)
+    reports: list[Path] = field(default_factory=list)
+
+
+@dataclass
 class SavedData:
     summary: dict = field(default_factory=dict)
     job: dict = field(default_factory=dict)
@@ -42,6 +51,7 @@ class SavedData:
     reports: list[Path] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     notices: list[str] = field(default_factory=list)
+    modules: dict[str, ModuleData] = field(default_factory=dict)
 
 
 class DashboardStore:
@@ -49,6 +59,20 @@ class DashboardStore:
         self.root = root
         self._snapshot_signature = None
         self._snapshot_summary: dict = {}
+        self._module_cache: dict[str, tuple[tuple, dict]] = {}
+
+    def _module_snapshot(self, filename: str) -> dict:
+        path = self.root / "state" / filename
+        try:
+            stat = path.stat()
+        except OSError:
+            self._module_cache.pop(filename, None)
+            return {}
+        signature = (stat.st_mtime_ns, stat.st_size)
+        cached = self._module_cache.get(filename)
+        if cached is None or cached[0] != signature:
+            self._module_cache[filename] = (signature, read_json(path))
+        return self._module_cache[filename][1]
 
     @property
     def report_dir(self) -> Path:
@@ -98,13 +122,27 @@ class DashboardStore:
                     data.history.append(event)
             except ValueError:
                 data.notices.append("An invalid history entry was skipped.")
+        module_reports: dict[str, list[Path]] = {}
+        for module in MODULES:
+            try:
+                folder = self.report_dir / module.folder
+                candidates = [path for path in folder.glob("*.md") if path.is_file() and path.resolve().is_relative_to(folder)]
+                module_reports[module.key] = sorted(candidates, key=lambda path: path.stat().st_mtime_ns, reverse=True)[:200]
+            except (OSError, ValueError):
+                module_reports[module.key] = []
+                data.notices.append(f"The {module.title} report directory could not be read.")
         try:
-            base = self.report_dir
-            candidates = [path for folder in ("Navidrome", "Dev", "Audio", "Research", "Insights") for path in (base / folder).glob("*.md")
-                          if path.resolve().is_relative_to(base) and path.is_file()]
-            data.reports = sorted(candidates, key=lambda path: path.stat().st_mtime_ns, reverse=True)[:200]
-        except (OSError, ValueError):
-            data.notices.append("The report directory could not be read.")
+            data.reports = sorted((path for paths in module_reports.values() for path in paths),
+                                  key=lambda path: path.stat().st_mtime_ns, reverse=True)[:200]
+        except OSError:
+            data.notices.append("The shared report list changed while it was being read; refresh to retry.")
+        for module in MODULES:
+            data.modules[module.key] = ModuleData(
+                snapshot=data.summary if module.key == "navidrome" else self._module_snapshot(module.snapshot),
+                last_run=data.last_run if module.key == "navidrome" else read_json(self.root / "state" / f"{module.key}-last-run.json"),
+                history=[event for event in data.history if event_module(event) == module.key],
+                reports=module_reports[module.key],
+            )
         for line in tail(self.root / "logs" / "nyx.log")[-500:]:
             try:
                 entry = json.loads(line)

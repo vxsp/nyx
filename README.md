@@ -164,17 +164,21 @@ Install the optional interface and open it from the project root:
 .\.venv\Scripts\python.exe main.py tui
 ```
 
-The dashboard reads saved statistics/snapshots, diagnostics, job history, reports, and redacted error logs. It supports the original saved snapshot and report names; a new scan is not required just to open it. No extra service is installed.
+The dashboard opens on a module overview. **Navidrome**, **Dev**, **Audio / FL Studio**, **Research**, and **Insights** each have a dedicated workspace with their own saved status, summary, action, history, report list, and preview. Navidrome statistics/formats/diagnostics live inside its workspace. Shared Jobs, All reports, and Errors pages remain available. Opening or switching pages reads saved data only; a new scan is not required. Original snapshot/report names are supported. No extra service is installed.
+
+Module buttons explicitly launch the existing CLI: Dev inspects Git metadata without executing checks; Audio inventories configured folders without reading tags; Research fetches only configured sources; Insights reads local history. Each page explains its private setup file and limits. Tests/builds (`dev-report --run-checks`), tag reading (`audio-report --read-tags`), and research read acknowledgements remain explicit CLI actions. One shared job lock prevents modules from running reports concurrently.
 
 Choose **Nyx**, **Catppuccin Mocha**, or **AMOLED Black** in the theme selector at the top, or press **T** to cycle. AMOLED uses pure black for the main background, panels, and cards. Your selection is saved locally in ignored `state/tui-preferences.json` and restored next time. Opening/refreshing the dashboard does not write preferences; unavailable/corrupt preferences fall back to Nyx. If saving fails, the selected theme still works for the current session. No additional dependency is needed.
 
 | Key | Action |
 | --- | --- |
-| 1-6 | Overview, library, jobs/history, reports, errors, Insights |
+| 1 | All-module overview; select a row and press Enter to open a module |
+| 2-6 | Navidrome, Dev, Audio / FL Studio, Research, Insights |
+| 7-9 | Shared Jobs, All reports, Errors |
 | R | Reload saved files only |
 | T | Cycle Nyx, Catppuccin Mocha, AMOLED Black; remember the selection locally |
 | I | Explicitly generate local Insights from saved state; no network |
-| N | Explicit manual report (bypasses admission checks; holds job lock) |
+| N | Explicit Navidrome report from any page (bypasses admission checks; holds job lock) |
 | X | Cancel only the dashboard-owned manual process |
 | Q | Quit; guarded while an owned report runs |
 | Tab / arrows / Enter | Navigate controls and select reports |
@@ -220,11 +224,21 @@ nyx/
   jobs/
     __init__.py
     navidrome.py            API, collection, analysis, reports
+    dev.py                  Configured project health and opt-in checks
+    audio.py                Read-only inventory and opt-in tag diagnostics
+    research.py             Explicit configured digests/read acknowledgements
+    insights.py             Local historical analysis
   src/main.rs               One-shot Rust launcher
   Cargo.toml                Rust manifest; no external dependencies
   requirements.txt          Core Python dependency ranges
   requirements-tui.txt      Optional pinned Textual dependency
-  nyx/                      Configuration, runtime, logging, saved data, TUI
+  nyx/
+    modules.py              Fixed dashboard module identities and commands
+    module_views.py         Scoped module workspaces
+    tui.py, tui.tcss         Shared navigation, execution and styles
+    themes.py               Dashboard palettes and private preference
+    saved.py                Scoped saved-state/report reads and caches
+    config.py, runtime.py, logging.py
   docs/                     Development log, Windows checklist, demo preview
   config/
     .env.example            Safe template

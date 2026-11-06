@@ -15,6 +15,7 @@ Follow [README.md](README.md) using native Windows 11 and PowerShell. Run comman
 - Use UTF-8 and the repository's `.editorconfig` and `.gitattributes` conventions. Check `cargo fmt --check` when editing Rust.
 - Use descriptive commits. For later development, work in a branch and describe the behavior, validation, and limitations in the pull request.
 - Update documentation when a feature moves from planned to implemented.
+- Keep module presentation separate from execution: fixed dashboard metadata belongs in `nyx/modules.py`, saved-data workspaces in `nyx/module_views.py`, and shared subprocess ownership/navigation in `nyx/tui.py`. Test scoped reports/history and exact safe command routing with synthetic jobs. Never make browsing or refresh execute a module.
 - Commit `Cargo.lock` when generated for this application; keep `target/` untracked.
 
 ## Validation

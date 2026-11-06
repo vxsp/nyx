@@ -15,29 +15,30 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, DataTable, Footer, Header, Log, Markdown, Select, Static, TabbedContent, TabPane
 
 from nyx.logging import redact
+from nyx.modules import MODULES, BY_COMMAND
+from nyx.module_views import ModulePane
 from nyx.runtime import JobBusyError, job_lock, record_event
 from nyx.saved import DashboardStore
 from nyx.themes import AMOLED_THEME, NYX_THEME, THEME_CHOICES, THEME_NAMES, load_theme, save_theme
 
 
-def metric(value: object) -> str:
-    return f"{value:,}" if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else "--"
-
-
 class NyxApp(App):
     TITLE = "NYX"
-    SUB_TITLE = "Idle automation / saved library workspace"
+    SUB_TITLE = "Idle automation / module workspaces"
     CSS_PATH = "tui.tcss"
     BINDINGS = [
         Binding("r", "refresh_saved", "Refresh saved"),
-        Binding("n", "run_report", "Run report"),
+        Binding("n", "run_report", "Navidrome report"),
         Binding("x", "cancel_report", "Cancel owned job"),
         Binding("1", "tab('overview')", "Overview", show=False),
-        Binding("2", "tab('library')", "Library", show=False),
-        Binding("3", "tab('jobs')", "Jobs", show=False),
-        Binding("4", "tab('reports')", "Reports", show=False),
-        Binding("5", "tab('errors')", "Errors", show=False),
+        Binding("2", "tab('navidrome')", "Navidrome", show=False),
+        Binding("3", "tab('dev')", "Dev", show=False),
+        Binding("4", "tab('audio')", "Audio", show=False),
+        Binding("5", "tab('research')", "Research", show=False),
         Binding("6", "tab('insights')", "Insights", show=False),
+        Binding("7", "tab('jobs')", "Jobs", show=False),
+        Binding("8", "tab('reports')", "Reports", show=False),
+        Binding("9", "tab('errors')", "Errors", show=False),
         Binding("i", "insights_report", "Local insights"),
         Binding("t", "cycle_theme", "Theme"),
         Binding("q", "quit", "Quit", priority=True),
@@ -67,48 +68,32 @@ class NyxApp(App):
         with TabbedContent(initial="overview", id="workspace"):
             with TabPane("1 Overview", id="overview"):
                 with VerticalScroll():
-                    yield Static("YOUR LIBRARY, AT A GLANCE", classes="section")
-                    with Horizontal(id="metrics"):
-                        for key in ("tracks", "albums", "artists", "playlists"):
-                            yield Static("--", id=key, classes="metric")
-                    yield Static("No saved report", id="capture", markup=False)
-                    yield Static("", id="overview-detail", markup=False, classes="panel")
-                    yield Static("", id="notices", markup=False)
-                    with Horizontal(classes="actions"):
-                        yield Button("Refresh saved [R]", id="refresh")
-                        yield Button("Run report [N]", id="run-report", variant="primary")
-                    yield Static("Manual reports bypass cooldown/resource admission checks. Music files and server metadata stay read-only.", classes="hint")
-            with TabPane("2 Library", id="library"):
-                with VerticalScroll():
-                    yield Static("AUDIO FORMATS", classes="section")
-                    yield DataTable(id="formats", cursor_type="row", zebra_stripes=True)
-                    yield Static("LIBRARY DIAGNOSTICS", classes="section")
-                    yield DataTable(id="diagnostics", cursor_type="row", zebra_stripes=True)
-                    yield Static("Duplicate groups are candidates; missing artwork references do not prove missing embedded artwork.", classes="hint")
-            with TabPane("3 Jobs", id="jobs"):
+                    yield Static("YOUR MODULES", classes="section")
+                    yield Static("Select a module below or use 2-6. Each workspace has its own saved status, actions, history and reports.", classes="hint")
+                    yield DataTable(id="module-list", cursor_type="row", zebra_stripes=True)
+                    yield Button("Refresh saved [R]", id="refresh")
+                    yield Static("", id="shared-notices", markup=False)
+                    yield Static("Opening modules and refreshing only read saved files. Jobs run only when explicitly requested.", classes="hint")
+            for number, module in enumerate(MODULES, start=2):
+                yield ModulePane(module, number)
+            with TabPane("7 Jobs", id="jobs"):
                 yield Static("", id="job-status", markup=False, classes="panel")
                 yield Static("EXECUTION HISTORY / LAST 500 EVENTS", classes="section")
                 yield DataTable(id="history", cursor_type="row", zebra_stripes=True)
                 yield Static("MANUAL JOB OUTPUT", classes="section")
                 yield Log(id="job-output", max_lines=200, highlight=False)
-            with TabPane("4 Reports", id="reports"):
+            with TabPane("8 All reports", id="reports"):
                 yield Static("Select a report and press Enter. Both new and legacy filenames are supported.", classes="hint")
                 yield DataTable(id="report-list", cursor_type="row", zebra_stripes=True)
                 with VerticalScroll(id="report-preview"):
-                    yield Markdown("# No saved report\n\nRun a report explicitly to collect library data.", id="report-body", open_links=False)
-            with TabPane("5 Errors", id="errors"):
+                    yield Markdown("# No saved report\n\nGenerate a module report explicitly.", id="report-body", open_links=False)
+            with TabPane("9 Errors", id="errors"):
                 yield Static("WARNINGS & ERRORS / PRIVATE ROTATING LOG", classes="section")
                 yield Log(id="error-log", max_lines=500, highlight=False)
-            with TabPane("6 Insights", id="insights"):
-                yield Button("Generate local insights [I]", id="run-insights", variant="primary")
-                yield Static("Reads existing state/history only. No Navidrome or research fetch. Missing history stays unavailable.", classes="hint")
-                with VerticalScroll(id="insights-preview"):
-                    yield Markdown("# No saved insights\n\nPress I to generate a local history report.", id="insights-body", open_links=False)
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#formats", DataTable).add_columns("Format", "Tracks")
-        self.query_one("#diagnostics", DataTable).add_columns("Diagnostic", "Count")
+        self.query_one("#module-list", DataTable).add_columns("Module", "Last saved event", "Last successful report (UTC)", "Reports")
         self.query_one("#history", DataTable).add_columns("UTC", "Module", "Status", "Phase / detail")
         self.query_one("#report-list", DataTable).add_columns("Saved report")
         self.action_refresh_saved()
@@ -134,39 +119,27 @@ class NyxApp(App):
             self.notify("Theme applied for this session; the preference could not be saved.", severity="warning")
 
     def action_tab(self, tab: str) -> None:
+        # A focused control in a hidden pane can otherwise reactivate its old tab.
+        self.set_focus(None)
         self.query_one("#workspace", TabbedContent).active = tab
+        for widget in self.query_one(f"#{tab}", TabPane).query("Button, DataTable, Log"):
+            if not widget.disabled:
+                widget.focus(scroll_visible=False)
+                break
 
     def action_refresh_saved(self) -> None:
         self.saved = self.store.load()
-        summary = self.saved.summary
-        for name in ("tracks", "albums", "artists", "playlists"):
-            self.query_one("#" + name, Static).update(Text(f"{metric(summary.get(name))}\n{name.upper()}"))
-        self.query_one("#capture", Static).update(Text(f"Captured: {summary.get('captured_at') or 'unavailable'} (UTC) | Refresh reads disk only"))
-        scan = summary.get("scan") if isinstance(summary.get("scan"), dict) else {}
-        scanning = "yes" if scan.get("scanning") is True else "no" if scan.get("scanning") is False else "unavailable"
-        size = summary.get("reported_file_bytes")
-        size_label = f"{size / 1024**3:.2f} GiB" if isinstance(size, (int, float)) and size >= 0 else "unavailable"
-        changes = (f"Added: {metric(summary.get('added_count'))}   Removed: {metric(summary.get('removed_count'))}"
-                   if summary.get("has_previous") else "Library change history: no comparison saved")
-        self.query_one("#overview-detail", Static).update(Text(
-            f"Indexed sizes: {size_label}   |   Scan status at capture: {scanning}\n"
-            f"Collection: {summary.get('duration_seconds', 'unavailable')} seconds\n{changes}\n"
-            f"Last successful job: {self.saved.last_run.get('completed_at', 'unavailable')}"
-        ))
-        self.query_one("#notices", Static).update(Text("\n".join(dict.fromkeys(self.saved.notices))))
-        formats = self.query_one("#formats", DataTable)
-        formats.clear()
-        values = summary.get("formats", {})
-        if isinstance(values, dict):
-            for name, count in values.items():
-                formats.add_row(Text(str(name).upper()), Text(metric(count)))
-        diagnostics = self.query_one("#diagnostics", DataTable)
-        diagnostics.clear()
-        values = summary.get("missing_metadata", {})
-        if isinstance(values, dict):
-            for name, count in values.items():
-                diagnostics.add_row(Text(str(name).replace("_", " ")), Text(metric(count)))
-        diagnostics.add_row(Text("Possible duplicate groups"), Text(metric(summary.get("duplicate_groups"))))
+        modules = self.query_one("#module-list", DataTable)
+        modules.clear()
+        for module in MODULES:
+            data = self.saved.modules[module.key]
+            self.query_one(f"#{module.key}", ModulePane).update_saved(data, self.store)
+            latest = data.history[-1] if data.history else {}
+            modules.add_row(Text(module.title), Text(str(latest.get("status", "No saved event"))),
+                            Text(str(data.last_run.get("completed_at", "No saved report"))),
+                            Text(str(len(data.reports))), key=module.key)
+        self.query_one("#shared-notices", Static).update(Text("\n".join(dict.fromkeys(self.saved.notices))))
+        self.query_one("#notices", Static).update(Text("No usable saved Navidrome data." if not self.saved.summary else ""))
         status = self.saved.job
         owned = "Running (owned manual process)" if self.running_report else "No manual process owned by this dashboard"
         self.query_one("#job-status", Static).update(Text(
@@ -190,13 +163,16 @@ class NyxApp(App):
                                          self.saved.reports[0] if self.saved.reports else None)
         if self._selected_report:
             self.query_one("#report-body", Markdown).update(self.store.read_report(self._selected_report))
+        else:
+            self.query_one("#report-body", Markdown).update("# No saved report\n\nGenerate a module report explicitly.")
         errors = self.query_one("#error-log", Log)
         errors.clear()
         errors.write_lines(self.saved.errors or ["No saved warnings or errors."])
-        insight_path = self.store.report_dir / "Insights" / "Nyx Insights report - latest.md"
-        self.query_one("#insights-body", Markdown).update(
-            self.store.read_report(insight_path) if insight_path.is_file() else "# No saved insights\n\nPress I to generate a local history report."
-        )
+
+    @on(DataTable.RowSelected, "#module-list")
+    def select_module(self, event: DataTable.RowSelected) -> None:
+        if event.row_key.value is not None:
+            self.action_tab(str(event.row_key.value))
 
     @on(DataTable.RowSelected, "#report-list")
     def select_report(self, event: DataTable.RowSelected) -> None:
@@ -210,25 +186,32 @@ class NyxApp(App):
     def refresh_button(self) -> None:
         self.action_refresh_saved()
 
-    @on(Button.Pressed, "#run-report")
-    def run_button(self) -> None:
-        self.action_run_report()
+    @on(Button.Pressed, ".module-run")
+    def run_module(self, event: Button.Pressed) -> None:
+        for module in MODULES:
+            button_id = "run-report" if module.key == "navidrome" else f"run-{module.key}"
+            if event.button.id == button_id:
+                self.start_job(module.command)
+                return
 
     def action_run_report(self) -> None:
         self.start_job("report")
 
-    @on(Button.Pressed, "#run-insights")
     def action_insights_report(self) -> None:
         self.start_job("insights-report")
 
     def start_job(self, command: str) -> None:
+        if command not in BY_COMMAND:
+            self.notify("Unsupported module action.", severity="warning")
+            return
         if self.running_report:
             self.notify("This dashboard already owns a running report.", severity="warning")
             return
         self.running_report = True
         self._owned_command = command
         self._cancel_requested = False
-        self.query_one("#run-report", Button).disabled = True
+        for button in self.query(".module-run"):
+            button.disabled = True
         self.action_tab("jobs")
         self.query_one("#job-output", Log).clear()
         self.collect_report()
@@ -260,7 +243,8 @@ class NyxApp(App):
             await self.stop_owned_process()
             self.process = None
             self.running_report = False
-            self.query_one("#run-report", Button).disabled = False
+            for button in self.query(".module-run"):
+                button.disabled = False
             self.action_refresh_saved()
 
     async def stop_owned_process(self) -> None:
@@ -277,7 +261,7 @@ class NyxApp(App):
             try:
                 with job_lock(self.root):
                     record_event(self.root, "interrupted", reason="Dashboard-owned process stopped",
-                                 module="insights" if self._owned_command == "insights-report" else "navidrome")
+                                 module=BY_COMMAND[self._owned_command].key)
             except (JobBusyError, OSError):
                 pass
         except ProcessLookupError:

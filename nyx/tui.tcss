@@ -4,6 +4,11 @@ Footer { background: $footer-background; }
 #toolbar { height: 3; background: $panel; }
 #mode { width: 1fr; height: 3; padding: 0 2; content-align: left middle; color: $secondary; }
 #theme-select { width: 28; margin-right: 2; }
+#module-list { height: 11; }
+.module-history { height: 8; }
+.module-reports { height: 6; }
+.module-preview { height: 18; border: round $border; padding: 0 1; }
+.module-run { width: auto; }
 TabbedContent { height: 1fr; }
 TabPane { padding: 1 2; }
 Tabs { background: $panel; }
@@ -13,8 +18,6 @@ Tabs { background: $panel; }
 #capture { height: auto; margin-bottom: 1; color: $foreground-muted; }
 .panel { height: auto; min-height: 5; border: round $border; padding: 1 2; background: $panel; }
 #notices { height: auto; margin-top: 1; color: $warning; }
-.actions { height: 3; margin-top: 1; }
-.actions Button { margin-right: 2; }
 .hint { height: auto; margin: 1 0; color: $foreground-muted; }
 #formats { height: 10; }
 #diagnostics { height: 12; }
@@ -23,4 +26,3 @@ Tabs { background: $panel; }
 #report-list { height: 8; }
 #report-preview { height: 1fr; border: round $border; padding: 0 1; }
 #error-log { height: 1fr; border: round $border; }
-#insights-preview { height: 1fr; border: round $border; padding: 0 1; }
