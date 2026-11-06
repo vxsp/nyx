@@ -50,9 +50,12 @@ def summary_text(key: str, snapshot: dict) -> str:
         if not isinstance(snapshot.get("items"), list) or not isinstance(snapshot.get("sources"), list):
             return "Saved research statistics are unavailable. Generate a research digest explicitly."
         items, sources = records(snapshot.get("items")), records(snapshot.get("sources"))
+        rotation = snapshot.get("rotation") if isinstance(snapshot.get("rotation"), dict) else {}
+        pool_status = (f"\nRepository pool: {metric(rotation.get('pool_size'))}; attempted this run: {metric(rotation.get('attempted_count'))}. Further runs rotate the remaining sources."
+                       if rotation.get("pool_size") else "")
         return (f"Retained entries: {len(items)} | Explicitly read: {sum(bool(item.get('read_at')) for item in items)}\n"
                 f"Sources collected: {sum(item.get('status') == 'collected' for item in sources)} | Unavailable: {sum(item.get('status') == 'unavailable' for item in sources)}\n"
-                "Marking articles read is explicit through CLI research-read --item-id; browsing does not mark them read.")
+                "Marking articles read is explicit through CLI research-read --item-id; browsing does not mark them read." + pool_status)
     return f"Recorded measurements: {metric(snapshot.get('measurement_count'))}\nTrends require comparable observations; missing history stays unavailable."
 
 

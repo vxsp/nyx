@@ -40,20 +40,47 @@ def configuration(root: Path, settings: dict) -> dict:
             raise ValueError()
         feeds = config.get("feeds", [])
         repos = config.get("github_repositories", [])
+        pool = config.get("github_repository_pool", [])
         budget = config.get("max_seconds", 120)
-        if not isinstance(feeds, list) or not isinstance(repos, list) or len(feeds) + len(repos) > 20:
+        if not isinstance(feeds, list) or not isinstance(repos, list) or not isinstance(pool, list) or len(feeds) > 20 or len(repos) > 20 or len(pool) > 2000:
             raise ValueError()
         for feed in feeds:
             if not isinstance(feed, dict) or not isinstance(feed.get("category", "Research"), str) or len(feed.get("category", "Research")) > 80:
                 raise ValueError()
             https_url(feed.get("url"))
-        if not all(isinstance(repo, str) and re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo) for repo in repos):
+        if not all(isinstance(repo, str) and re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo) for repo in repos + pool):
+            raise ValueError()
+        # GitHub repository identities are case-insensitive; never fetch the same repo twice.
+        unique = {}
+        for repo in repos:
+            unique.setdefault(repo.casefold(), repo)
+        repos = list(unique.values())
+        pool_unique = {}
+        for repo in pool:
+            if repo.casefold() not in unique:
+                pool_unique.setdefault(repo.casefold(), repo)
+        pool = list(pool_unique.values())
+        slots = 20 - len(feeds) - len(repos)
+        batch = config.get("github_batch_size", slots if slots > 0 else 1)
+        if slots < 0 or isinstance(batch, bool) or not isinstance(batch, int) or not 1 <= batch <= 20 or (pool and batch > slots):
             raise ValueError()
         if isinstance(budget, bool) or not isinstance(budget, int) or not 1 <= budget <= 600:
             raise ValueError()
     except (ValueError, TypeError):
-        raise ConfigurationError("Research needs at most 20 valid HTTPS feeds/repository names and a 1-600 second budget.") from None
-    return {"feeds": feeds, "github_repositories": repos, "max_seconds": budget}
+        raise ConfigurationError("Research needs at most 20 sources per run, valid HTTPS feeds/repository names, a pool up to 2000, a fitting 1-20 repository batch, and a 1-600 second budget.") from None
+    return {"feeds": feeds, "github_repositories": repos, "github_repository_pool": pool,
+            "github_batch_size": batch, "max_seconds": budget}
+
+
+def repository_batch(config: dict, previous: dict) -> tuple[list[str], str, int]:
+    pool = config["github_repository_pool"]
+    fingerprint = sha256("\n".join(repo.casefold() for repo in pool).encode()).hexdigest()
+    rotation = previous.get("rotation", {})
+    cursor = rotation.get("next_index", 0) if isinstance(rotation, dict) and rotation.get("pool_fingerprint") == fingerprint else 0
+    if isinstance(cursor, bool) or not isinstance(cursor, int) or not 0 <= cursor < len(pool):
+        cursor = 0
+    selected = [pool[(cursor + offset) % len(pool)] for offset in range(min(config["github_batch_size"], len(pool)))]
+    return selected, fingerprint, cursor
 
 
 def identity(url: str, fallback: str) -> str:
@@ -129,6 +156,8 @@ def run_research_report(root: Path, settings: dict, *, progress=None) -> Path:
     config = configuration(root, settings)
     state_path = root / "state" / "research-last.json"
     previous = read_json(state_path)
+    rotating, fingerprint, cursor = repository_batch(config, previous)
+    rotating_urls = {f"https://api.github.com/repos/{repo}/releases?per_page=10" for repo in rotating}
     old_items = previous.get("items", [])
     old_items = [item for item in old_items if isinstance(item, dict) and isinstance(item.get("id"), str)] if isinstance(old_items, list) else []
     old_seen = previous.get("seen_ids", [])
@@ -137,17 +166,22 @@ def run_research_report(root: Path, settings: dict, *, progress=None) -> Path:
     cache = previous.get("cache", {})
     cache = dict(cache) if isinstance(cache, dict) else {}
     sources = [(feed["url"], "feed", feed.get("category", "Research")) for feed in config["feeds"]]
-    sources += [(f"https://api.github.com/repos/{repo}/releases?per_page=10", "releases", "GitHub releases") for repo in config["github_repositories"]]
+    sources += [(f"https://api.github.com/repos/{repo}/releases?per_page=10", "releases", "GitHub releases") for repo in config["github_repositories"] + rotating]
     deadline = time.monotonic() + config["max_seconds"]
     new_items = []
     statuses = []
     captured = utc_now()
+    pool_attempts = 0
     with requests.Session() as session:
         session.trust_env = False  # No implicit .netrc authentication for research sources.
         session.headers.update({"User-Agent": "Nyx/0.1 (opt-in research digest)", "Accept": "application/json, application/atom+xml, application/rss+xml, application/xml"})
         for index, (url, kind, category) in enumerate(sources, start=1):
+            if time.monotonic() >= deadline:
+                break
             if progress:
                 progress("research sources", index - 1, len(sources))
+            if url in rotating_urls:
+                pool_attempts += 1
             key = sha256(url.encode()).hexdigest()
             cached = cache.get(key, {})
             try:
@@ -178,6 +212,8 @@ def run_research_report(root: Path, settings: dict, *, progress=None) -> Path:
                 statuses.append({"source": url, "status": "collected", "entries_observed": len(entries)})
             except (requests.RequestException, ValueError, UnicodeError, ET.ParseError, TimeoutError) as exc:
                 statuses.append({"source": url, "status": "unavailable", "error_type": type(exc).__name__})
+                if isinstance(exc, requests.HTTPError) and exc.response is not None and exc.response.status_code in (403, 429):
+                    break  # Preserve the unattempted remainder instead of hammering a limited source.
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
     retained = (old_items + new_items)[-1000:]
     daily = previous.get("daily_ids", []) if previous.get("digest_date") == today else []
@@ -187,7 +223,14 @@ def run_research_report(root: Path, settings: dict, *, progress=None) -> Path:
     day_items = [item for item in retained if item["id"] in daily_set]
     shown = day_items[:200]
     lines = ["# Nyx Research / digest", "", f"Collected: {captured} (UTC)", "", f"New entries: {len(new_items)}",
-             f"Retained entries collected today: {len(day_items)} (up to 200 displayed)", ""]
+             f"Retained entries collected today: {len(day_items)} (up to 200 displayed)",
+             f"Selected sources: {len(sources)}; attempted: {len(statuses)}; deferred by budget/source limit: {len(sources) - len(statuses)}", ""]
+    rotation = {"pool_fingerprint": fingerprint, "pool_size": len(config["github_repository_pool"]),
+                "selected_count": len(rotating), "attempted_count": pool_attempts,
+                "next_index": (cursor + pool_attempts) % len(config["github_repository_pool"]) if config["github_repository_pool"] else 0}
+    if config["github_repository_pool"]:
+        lines.extend([f"Repository pool: {rotation['pool_size']}; selected: {len(rotating)}; attempted: {pool_attempts}.",
+                      "Only a bounded batch is checked per explicit run. Further manual runs rotate through the remaining repositories; this is release monitoring, not all repository activity.", ""])
     if not sources:
         lines.extend(["No sources configured. Copy config/research.example.json to config/research.local.json and edit locally.", ""])
     lines.extend(["## Source status", ""])
@@ -210,7 +253,8 @@ def run_research_report(root: Path, settings: dict, *, progress=None) -> Path:
     atomic_write(dated, "\n".join(lines))
     atomic_write(report_dir / "Nyx Research report - latest.md", "\n".join(lines))
     atomic_write(state_path, json.dumps({"captured_at": captured, "items": retained, "digest_date": today, "daily_ids": daily_ids,
-                                        "seen_ids": seen[-5000:], "cache": cache, "sources": statuses}, indent=2))
+                                        "seen_ids": seen[-5000:], "cache": cache, "sources": statuses,
+                                        "rotation": rotation}, indent=2))
     return dated
 
 

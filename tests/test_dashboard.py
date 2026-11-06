@@ -205,7 +205,10 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
             state = root / "state"
             state.mkdir()
             for module in MODULES:
-                (state / module.snapshot).write_text('{"captured_at":"synthetic"}', encoding="utf-8")
+                snapshot = {"captured_at": "synthetic"}
+                if module.key == "research":
+                    snapshot.update(items=[], sources=[], rotation={"pool_size": 25, "attempted_count": 18})
+                (state / module.snapshot).write_text(json.dumps(snapshot), encoding="utf-8")
                 reports = root / "reports" / module.folder
                 reports.mkdir(parents=True)
                 (reports / "Earlier.md").write_text(f"# Earlier {module.key}", encoding="utf-8")
@@ -221,8 +224,10 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
                         await pilot.press(str(number))
                         self.assertEqual(app.query_one("#workspace", TabbedContent).active, module.key)
                         self.assertEqual(app.query_one(f"#{module.key}-history", DataTable).row_count, 1)
-                        if module.key in ("dev", "research"):
+                        if module.key == "dev":
                             self.assertIn("unavailable", str(app.query_one(f"#{module.key}-summary", Static).render()))
+                        if module.key == "research":
+                            self.assertIn("Repository pool: 25; attempted this run: 18", str(app.query_one("#research-summary", Static).render()))
                         reports = app.query_one(f"#{module.key}-reports", DataTable)
                         self.assertEqual(reports.row_count, 2)
                         body = app.query_one(f"#{module.key}-body", Markdown)

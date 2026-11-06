@@ -22,7 +22,7 @@ MODULES = (
     Module("audio", "Audio / FL Studio", "audio-report", "Audio", "audio-last.json", "Inventory configured folders",
            "Configure config/audio.local.json. Read-only file inventory; tag reading requires CLI audio-report --read-tags. FLP sample usage is unavailable."),
     Module("research", "Research", "research-report", "Research", "research-last.json", "Fetch research digest",
-           "Configure config/research.local.json. This explicit action fetches configured HTTPS feeds/releases. Seen does not mean read."),
+           "Configure config/research.local.json. Explicit HTTPS feed/release fetch; large repository pools rotate in bounded batches. Seen does not mean read."),
     Module("insights", "Insights", "insights-report", "Insights", "insights-summary.json", "Generate local insights [I]",
            "Reads saved history only; no network. Missing observations stay unavailable. No configuration is required."),
 )

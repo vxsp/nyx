@@ -100,6 +100,8 @@ Resource checks occur once; they do not throttle an active job. All API calls an
 
 Keep repository paths and check commands private. Copy `config/projects.example.json` to ignored `config/projects.local.json`, replace the placeholder root with an explicitly selected repository, and review its command arrays.
 
+Dev currently checks local folders only. An inventory of GitHub-owned repositories does not create local checkouts or enable their tests. GitHub-only projects need a separately authorized checkout before local inspection/testing; standalone folders without Git will report that Git metadata is unavailable. Leave `checks` empty until trusted commands are deliberately chosen.
+
 ```powershell
 # Read Git metadata only; declared project commands are not executed:
 .\.venv\Scripts\python.exe main.py dev-report
@@ -140,6 +142,10 @@ Copy `config/research.example.json` to ignored `config/research.local.json` and 
 ```
 
 The ID above is a placeholder. Collection fetches bounded RSS/Atom entries and stable public GitHub releases, deduplicates articles, and records source status/date information. Digests remain cumulative within the local day (up to 200 displayed); refreshes do not discard earlier same-day entries. State retains 5,000 seen IDs and 1,000 reading records. Seen is not treated as read.
+
+For larger follow lists, `github_repositories` contains fixed repositories checked on every run, while `github_repository_pool` accepts up to 2,000 repository names to rotate through. `github_batch_size` must fit alongside the feeds/fixed repositories within the unchanged **20-source limit per run**. Duplicate repository names are removed case-insensitively. The saved cursor advances only for attempted pool sources; a changed pool resets it. Budget exhaustion or HTTP 403/429 defers the remaining sources. Reports and the module summary show pool/batch coverage; following a pool does not mean every repository was checked in one run.
+
+Imported GitHub stars/watches are a private snapshot, not continuous account synchronization. Refresh the local import to add newly starred/watched repositories. Research uses public release endpoints without stored GitHub credentials; private repositories are excluded. This tracks releases, not every commit/issue or arbitrary web research. RSS source URLs should be verified against the bounded parser before use; a valid website URL alone is not a feed.
 
 Reports stay private under `reports/Research/` and appear in the browser. Source failures preserve retained history; unavailable dates are labeled. No source means an actionable empty report, not automatic web research. Periodic monitoring is not enabled.
 

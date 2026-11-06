@@ -1,5 +1,7 @@
 {
   "feeds": [{"url": "https://example.com/feed.xml", "category": "Research"}],
   "github_repositories": ["owner/repository"],
+  "github_repository_pool": ["owner/another-repository"],
+  "github_batch_size": 8,
   "max_seconds": 120
 }
