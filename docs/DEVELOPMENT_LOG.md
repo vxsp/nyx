@@ -69,3 +69,10 @@
 - A proposed manual read-only Navidrome validation was blocked before execution by automatic approval review, citing `AGENTS.md`'s prohibition on live reports as tests. No request was sent; the owner was asked for explicit approval. Live integration remains unverified unless that approval and successful check are recorded later.
 - The native local Insights smoke check used existing state only, blocked HTTP, and preserved original Navidrome snapshot/cooldown hashes. Generated reports, logs, credentials, and measurements remain local and excluded from Git.
 - Remaining work: Rust/MSVC prerequisite and D lifecycle, manual terminal/live integration, hard process containment, advanced FLP references, and enough real samples for multi-run trends. Unattended behavior remains disabled. This is a checkpoint, not a claim of background work after the session ends.
+
+## 2026-11-05: approved manual Navidrome integration validation
+
+- The owner explicitly approved one manual read-only validation against the configured `https://vxsp.pikapod.net`, resolving the earlier automatic approval rejection for this run. Resource admission passed before dispatch; the CLI completed successfully. This approval does not extend to future live tests or unattended runs.
+- Verified the prefixed dated/latest reports, full snapshot, compact summary, success state, and matching successful real job measurement. Existing legacy reports retained identical hashes. Private credentials, reports, state, measurements, and logs remain ignored by Git; detailed results were neither printed nor added to documentation.
+- The dashboard loaded the new saved data with network calls forbidden. Fresh-terminal appearance and dashboard-triggered live child integration still need separate validation; no performance improvement or multi-run trend is inferred from one run.
+- Documentation-only follow-up: clarified the explicit manual-validation boundary in `AGENTS.md` and updated architecture/roadmap status. The retained code suite previously passed 72 offline tests; source code is unchanged in this follow-up. Native D remains blocked on Rust/MSVC and H remains scrapped.

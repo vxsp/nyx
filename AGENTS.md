@@ -51,7 +51,7 @@ The initial Navidrome reporter already works. The owner supplied this first-repo
 - Do not rotate credentials, delete local data, rewrite history, force-push, or replace unrelated repositories without explicit authorization.
 - Do not add an open-source license without approval.
 - Navidrome stays read-only by default. Do not start scans, edit playlists/tags, or change server files incidentally.
-- Do not run live reports or register tasks as tests. `register-idle-task.ps1` can replace an existing `Nyx` task; inspect it and obtain approval before replacement.
+- Do not run live reports or register tasks as tests. A separate manual live validation requires explicit owner approval for its target and private output writes; a one-time approval does not authorize future live tests or unattended runs. `register-idle-task.ps1` can replace an existing `Nyx` task; inspect it and obtain approval before replacement.
 - No destructive file operations without approval. Preserve working local credentials, output, and task configuration.
 
 ## Development and checks

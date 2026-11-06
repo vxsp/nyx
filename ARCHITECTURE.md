@@ -10,6 +10,8 @@ The owner's priority order is Navidrome reporting, coding project testing/mainte
 
 The existing Navidrome integration targets `https://vxsp.pikapod.net` through private environment configuration. Its first successful report, as supplied by the owner, found **1,736 tracks, 398 albums, 214 artists, and 12 playlists**. This historical aggregate is approved project context, not a fresh server measurement or a fixed test expectation. Detailed reports, paths, playlists, and snapshots remain private.
 
+One explicitly owner-approved manual live validation passed on 2026-11-05 after resource admission. The current reporter produced the prefixed dated/latest reports, full snapshot, compact summary, success state, and a real job measurement while preserving legacy reports. The dashboard then loaded saved data with networking forbidden. Detailed results stay private; this does not validate unattended scheduling, terminal appearance, or performance trends, and routine tests remain offline.
+
 Accepted boundaries are native Windows without WSL/Docker, Rust for the future background engine and performance-sensitive operations, and Python for integrations, analysis, and reporting. Music operations remain read-only by default. Preserve existing working code and keep resource use low. An initial Python Textual terminal interface is implemented as a saved-state client of the existing CLI; the native background engine remains planned.
 
 ## Current boundaries
