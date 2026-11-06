@@ -1,0 +1,15 @@
+{
+  "navidrome": {
+    "enabled": true,
+    "minimum_hours_between_reports": 24,
+    "page_size": 200,
+    "max_albums": 2000,
+    "request_timeout_seconds": 12,
+    "max_report_seconds": 600
+  },
+  "resources": {
+    "minimum_available_ram_gb": 3,
+    "maximum_cpu_percent": 35,
+    "only_when_plugged_in": true
+  }
+}
