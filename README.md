@@ -21,6 +21,8 @@ Version 0.1 implements a Navidrome library reporter and a one-shot Rust launcher
 
 Nyx accesses an existing Navidrome server; it does not install or host one. Current comparison uses the last complete snapshot, not a historical analytics database.
 
+Persistent project context lives in [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [ROADMAP.md](ROADMAP.md). The roadmap records the owner's priorities, first-report baseline, and accepted future `Navidrome report` filename prefix; current filenames below remain unchanged.
+
 ## Windows setup
 
 Use native Windows 11 and PowerShell. WSL, Docker, and additional background services are not required.
@@ -137,6 +139,7 @@ nyx/
   state/.gitkeep
   README.md
   ARCHITECTURE.md
+  ROADMAP.md
   CONTRIBUTING.md
   AGENTS.md
 ```

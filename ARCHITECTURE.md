@@ -4,6 +4,14 @@
 
 Nyx 0.1 has one Python job and one Rust executable. It preserves the working Navidrome reporter and uses Windows Task Scheduler without adding a resident service. Native Windows 11 on an Intel i3-1115G4 laptop with 16 GB RAM is the target; resource efficiency is a goal, not a measured performance guarantee.
 
+## Persistent product context
+
+The owner's priority order is Navidrome reporting, coding project testing/maintenance, music and FL Studio organization, automated research reports, backups/PC maintenance, then a visual terminal dashboard. `ROADMAP.md` records the milestone sequence and acceptance criteria; `AGENTS.md` records durable decisions and the documentation-update contract.
+
+The existing Navidrome integration targets `https://vxsp.pikapod.net` through private environment configuration. Its first successful report, as supplied by the owner, found **1,736 tracks, 398 albums, 214 artists, and 12 playlists**. This historical aggregate is approved project context, not a fresh server measurement or a fixed test expectation. Detailed reports, paths, playlists, and snapshots remain private.
+
+Accepted boundaries are native Windows without WSL/Docker, Rust for the future background engine and performance-sensitive operations, and Python for integrations, analysis, and reporting. Music operations remain read-only by default. Preserve existing working code and keep resource use low. A visual terminal interface is planned; its framework and engine interface have not been selected.
+
 ## Current boundaries
 
 | Component | Responsibility | Current limit |
@@ -67,6 +75,8 @@ The client is internally generic, but the current reporting flow calls only read
 
 An optional `NYX_REPORT_DIR` moves report output, not state. Filenames use the host's local date; timestamps use UTC. Same-day runs replace the dated report.
 
+The accepted future filename prefix is **`Navidrome report`**. It is not yet implemented: `run_report` currently writes `Navidrome/YYYY-MM-DD.md` and `Navidrome/Latest.md`. The planned names are `Navidrome report YYYY-MM-DD.md` and `Navidrome report Latest.md` within the same output directory. Implement this as a separate, tested change; preserve existing files and snapshots, update returned/recorded paths and user documentation, and never rename or delete private historical reports during repository preparation.
+
 `atomic_write` writes a sibling `.tmp` file and uses `os.replace`. This protects one file replacement, not a multi-file transaction. Report files can advance before a later write fails. Fixed temporary names create concurrent-writer risks; cancellation can leave temporary files. Only one previous snapshot is retained.
 
 Snapshots can contain library paths, artists, titles, and playlist metadata. Treat them and reports as private even without credentials. Do not publish starter archives or use real snapshots as fixtures.
@@ -88,4 +98,12 @@ Snapshots can contain library paths, artists, titles, and playlist metadata. Tre
 
 Future Rust work should own lightweight scheduling, Windows state observation, lifecycle/cancellation, and performance-sensitive coordination. Python should own network integrations, analysis, research, and reports. Keep jobs independently callable and testable; agree on configuration, results, and failure contracts before introducing a persistent controller.
 
+The planned TUI should expose the engine's job state, resource admission decisions, progress, and report locations without owning integration logic. It must not require elevated privileges or keep an extra service running solely for the dashboard. This is a design direction, not an implemented interface or chosen technology.
+
 Repository maintenance, local music/FL Studio analysis, research, backups, system maintenance, historical analytics, and a TUI are plans, not implemented modules. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
+
+## Validation and documentation maintenance
+
+The repository-preparation baseline has 15 passing offline Python tests and a successful dependency consistency check. The three PowerShell helpers passed syntax parsing; this does not verify installation or scheduling behavior. Rust compilation and Windows idle/AC lifecycle validation remain pending. No fresh live report was run to establish this context.
+
+Keep this description aligned with source changes, update milestone state in `ROADMAP.md`, and carry durable decisions into `AGENTS.md` in the same change. Recheck implementation before promoting any planned capability to completed. Unrelated ChatGPT conversations need repository access or these documents supplied explicitly to recover the context.
