@@ -57,18 +57,10 @@ def due(config: dict) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Nyx personal background automation runner")
-    parser.add_argument("command", choices=["report", "run", "status", "tui"], help="report=manual; run=scheduled; status=last run; tui=dashboard")
+    parser.add_argument("command", choices=["report", "run", "status"], help="report=manual; run=scheduled; status=last run")
     args = parser.parse_args()
     logger = None
     try:
-        if args.command == "tui":
-            try:
-                from nyx.tui import NyxApp
-            except ImportError:
-                print("Install dashboard dependencies: python -m pip install -r requirements-tui.txt", file=sys.stderr)
-                return 2
-            NyxApp(ROOT).run()
-            return 0
         if args.command == "status":
             if last_run_path().exists():
                 print(last_run_path().read_text(encoding="utf-8"))
@@ -123,7 +115,8 @@ def main() -> int:
     except (ConfigurationError, NavidromeError) as exc:
         if logger:
             logger.error("%s: %s", type(exc).__name__, exc)
-        print(f"Nyx Navidrome error: {exc}", file=sys.stderr)
+        category = "configuration" if isinstance(exc, ConfigurationError) else "Navidrome"
+        print(f"Nyx {category} error: {exc}", file=sys.stderr)
         return 2 if isinstance(exc, ConfigurationError) else 1
     except Exception as exc:
         if logger:

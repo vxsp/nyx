@@ -21,7 +21,7 @@ Version 0.1 implements a Navidrome library reporter and a one-shot Rust launcher
 
 Nyx accesses an existing Navidrome server; it does not install or host one. Current comparison uses the last complete snapshot, not a historical analytics database.
 
-Persistent project context lives in [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [ROADMAP.md](ROADMAP.md). The roadmap records the owner's priorities, first-report baseline, and accepted future `Navidrome report` filename prefix; current filenames below remain unchanged.
+Persistent project context lives in [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [ROADMAP.md](ROADMAP.md). The roadmap records the owner's priorities, first-report baseline, and accepted implemented `Navidrome report` filename prefix.
 
 ## Windows setup
 
@@ -71,11 +71,11 @@ Run from the project root:
 ```
 
 - `status` reads the last successful run record without contacting Navidrome.
-- `report` runs manually, bypassing the enabled flag, cooldown, and resource prechecks. It contacts Navidrome and writes local reports/state.
+- `report` runs manually, bypassing the enabled flag, cooldown, and resource prechecks. It holds an OS job lock, contacts Navidrome, and writes local reports/state.
 - `run` respects the enabled flag, cooldown, and resource prechecks. Skipped runs exit successfully.
 - `scripts/manual-report.ps1` invokes the same manual `report` command.
 
-Successful runs write `reports/Navidrome/YYYY-MM-DD.md`, `Latest.md`, `state/navidrome-last.json`, and `state/last-run.json`. The report directory override does not move state. Same-day runs replace that day's report. Filenames use local dates; snapshot timestamps use UTC.
+Successful runs write `reports/Navidrome/Navidrome report - YYYY-MM-DD.md`, `Navidrome report - latest.md`, `state/navidrome-last.json`, `state/navidrome-summary.json`, and `state/last-run.json`. Legacy reports are preserved. The report directory override does not move state. Same-day runs replace that day's report. Filenames use local dates; snapshot timestamps use UTC.
 
 Shared defaults in `config/settings.json`:
 
@@ -89,7 +89,7 @@ Shared defaults in `config/settings.json`:
 | HTTP read timeout | 12 seconds |
 | Album retrieval budget | 600 seconds |
 
-Resource checks occur once; they do not throttle an active job. Initial API calls and pagination are outside the time-budget check, and in-flight requests can overrun the remaining budget.
+Resource checks occur once; they do not throttle an active job. All API calls and pagination share a cooperative deadline with bounded request timeouts; this is not a hard process execution limit. Invalid known configuration fields fail before requests are sent.
 
 ## Optional Rust launcher and idle task
 
@@ -150,6 +150,8 @@ Private `.env`, `.venv`, build output, the starter ZIP, reports, logs, and state
 
 Collection is sequential and holds library metadata in memory. It never edits server files, tags, playlists, or scan state. Duplicates are candidates, not proof of identical audio. Lyrics and embedded artwork are not inspected.
 
-Writes are atomic per file, not across all output files. Manual runs have no shared lock, and interruption can leave reports ahead of the snapshot. Configuration validation and automated Windows lifecycle coverage remain incomplete.
+Writes are atomic per file, not across all output files; interruption can leave reports ahead of the snapshot. An OS file lock prevents concurrent report/run writers. Private rotating JSON logs live in `logs/nyx.log`; progress and up to 500 execution events live in `state/`. Startup settings errors and unexpected failures are reported without raw exception details.
 
-The next milestone should verify the Rust build and idle-task lifecycle on Windows, then harden configuration, execution bounds, and concurrent-run protection before adding another job. See [ARCHITECTURE.md](ARCHITECTURE.md).
+Public repository: [vxsp/nyx](https://github.com/vxsp/nyx). Run `.venv\Scripts\python.exe scripts/check-secrets.py` before a push. The audit supplements review and permits ignored, untracked local credentials.
+
+The next milestone is the saved-state Textual dashboard. Rust build/idle lifecycle prerequisites and validation remain documented in [docs/WINDOWS_VALIDATION.md](docs/WINDOWS_VALIDATION.md). See [ARCHITECTURE.md](ARCHITECTURE.md).

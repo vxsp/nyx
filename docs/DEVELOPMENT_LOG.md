@@ -9,3 +9,12 @@
 - GitHub connector identifies `vxsp` but cannot create repositories with its exposed tools. Git Credential Manager has a noninteractive login under the owner's Windows account; credentials are never printed or written to project files. Repository availability will be rechecked through that authenticated path.
 - Current task: audit complete tracked history and candidate material, publish without replacing unrelated work, then implement the Navidrome filename prefix and reliability improvements before the Textual TUI.
 - Known gaps: configuration/API/state validation, complete collection time budgets, concurrent runs, cross-file write consistency, Rust build/lifecycle validation. No unattended scheduling was activated.
+
+## 2026-11-05: publication and first Navidrome reliability increment
+
+- Published [vxsp/nyx](https://github.com/vxsp/nyx), `main`, preserving prior commits. All 26 initial remote file paths/blob hashes matched the local published tree; public visibility/default main verified. No license, private data, or credentials were published.
+- Implemented the exact `Navidrome report - YYYY-MM-DD.md` / `Navidrome report - latest.md` names without touching legacy reports; retained snapshots and added a compact saved summary.
+- Added known-setting validation, OS file locking, redacted rotating JSON logging, bounded execution history/progress state, safer API envelope/errors and read-endpoint allowlist, cooperative collection-wide budgets, unique temporary files, and installer failure propagation.
+- Added a repeatable redacted pre-push audit and a regression test detecting a removed credential-shaped value in historical commits. Audits supplement review, not proof of secret absence.
+- Validation: 31 offline tests passed; dependency check passed. No live server requests or personal report writes were used for this increment. The Rust toolchain remains unavailable; native setup/lifecycle checklist is in `docs/WINDOWS_VALIDATION.md`.
+- Remaining limits: cross-file writes are not transactional; native resource/activity enforcement, strict nested API validation, measured performance, and multi-page coverage need further work. Next: Textual dashboard consuming saved state, with explicit manual execution and headless tests.

@@ -16,23 +16,23 @@ Owner-reported first run at `https://vxsp.pikapod.net`: 1,736 tracks, 398 albums
 - [x] Establish ignore rules, safe examples, developer docs, persistent context, and offline safety tests.
 - [x] Resolve the earlier publication gate: the owner explicitly permits ignored, untracked `config/.env`.
 - [x] Confirm connected GitHub identity `vxsp` and noninteractive native Git credentials under the owner's Windows account.
-- [ ] Audit complete tracked history and exact publication material; verify private `.env` is ignored/untracked.
-- [ ] Recheck repository availability/ownership, create public `vxsp/nyx` only if absent, configure `origin`, push `main`, verify remote files.
-- [ ] Validate native Windows setup and propagate installer failures reliably.
-- [ ] Validate configuration, structured error handling, and safe logging; strengthen regression tests.
-- [ ] Check Rust availability; install at user level where permitted or document prerequisites/blocker.
+- [x] Audit complete tracked history and publication material; private `.env` is ignored/untracked. A repeatable redacted audit now lives in `scripts/check-secrets.py`.
+- [x] Create public [vxsp/nyx](https://github.com/vxsp/nyx), configure `origin`, push `main` preserving history, verify all 26 initial remote paths/blob hashes and public/main settings.
+- [x] Propagate venv/pip failures in the native setup script; PowerShell syntax checked. Full fresh-machine setup remains unverified.
+- [x] Validate known configuration fields, add safe rotating JSON logs/error handling, job locking, progress/events, and strengthen tests (31 passing).
+- [x] Check Rust availability and document missing toolchain/MSVC prerequisites in `docs/WINDOWS_VALIDATION.md`. Compilation and native idle lifecycle remain blocked pending installation.
 
 Do not publish credentials, private reports, snapshots, or media. An ignored local credential alone is not a blocker. Exposed credentials in tracked history/publication material require intervention. Preserve history, never force-push over unrelated work, and do not add a license without approval.
 
 ## B: improved Navidrome reporting — next
 
-- [ ] Use `Navidrome report - YYYY-MM-DD.md` and `Navidrome report - latest.md` under the existing `Navidrome/` output folder; retain JSON snapshots and preserve old private reports.
+- [x] Use `Navidrome report - YYYY-MM-DD.md` and `Navidrome report - latest.md` under `Navidrome/`; retain snapshots, add a compact saved summary, preserve old reports.
 - [ ] Improve availability/scan reporting, library counts, formats, metadata/artwork diagnostics, duplicate candidates, and historical changes using actual API data.
-- [ ] Add safe error/progress feedback and bounded paginated collection without unnecessary server load.
-- [ ] Cover success, failure, partial-write, pagination, and naming behavior with offline tests.
+- [x] Add safe error/progress feedback, a read-endpoint allowlist, and collection-wide cooperative deadlines including pagination; keep sequential requests and existing gentle pauses.
+- [x] Cover read endpoints, limits, initial-call budgets, redaction, failures, partial writes, naming, and old-report preservation with offline tests. Multi-page and malformed nested payload coverage remains to extend.
 - [ ] Investigate measured performance improvements; retain read-only operation.
 
-Acceptance: useful, correctly named reports and snapshots; explicit incomplete/unavailable data; failures preserve usable state; no music/server mutation or fabricated metrics. Current output names remain date-only/`Latest.md` until implementation.
+Acceptance: useful, correctly named reports and snapshots; explicit incomplete/unavailable data; failures preserve usable state; no music/server mutation or fabricated metrics. New filenames are implemented; old files remain untouched. In-flight socket reads are not a hard process time limit.
 
 ## C: interactive TUI — planned
 

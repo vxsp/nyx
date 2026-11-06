@@ -17,9 +17,12 @@ Accepted boundaries are native Windows without WSL/Docker, Rust for the future b
 | Component | Responsibility | Current limit |
 | --- | --- | --- |
 | `src/main.rs` | Validate command, select Python, start one child, forward exit status | No idle detection or scheduling loop |
-| `main.py` | Configuration, CLI, scheduled-run gates, dispatch, last-run record | No general job registry |
+| `main.py` | Validated configuration, CLI, admission, locked dispatch, progress/history | No general job registry |
+| `nyx/config.py` | Strict known-setting type/range validation and defaults | Unknown future sections preserved |
+| `nyx/runtime.py` | OS-managed exclusive job lock, progress and bounded event history | No native idle controller |
+| `nyx/logging.py` | Rotating redacted JSON logs | No server bodies/raw exceptions |
 | `jobs/navidrome.py` | HTTPS client, collection, diagnostics, comparison, rendering, writes | Only implemented job |
-| `config/settings.json` | Versioned resource and collection defaults | No schema validation |
+| `config/settings.json` | Versioned resource and collection defaults | Known fields validated before work |
 | `config/.env` | Private server/login/output settings | Local only |
 | `scripts/*.ps1` | Setup, manual invocation, opt-in task registration | Registration modifies Windows state |
 | `tests/` | Offline behavior checks | No real server or Task Scheduler integration |
@@ -44,7 +47,9 @@ flowchart TD
 
 The launcher requires the project root as its working directory, closes child stdin, waits, and returns success or a bounded failure code. It is not a daemon. Task Scheduler controls idle admission and interruption.
 
-`run` checks the enabled flag, successful-run cooldown, then resources. CPU sampling waits 0.8 seconds. Checks occur once, not continuously. `report` bypasses all three gates but updates the same successful-run timestamp. `status` reads local state without HTTP.
+`run` checks the enabled flag, successful-run cooldown, then resources while holding the job lock. CPU sampling waits 0.8 seconds. Checks occur once, not continuously. `report` bypasses these gates but holds the same lock and updates the successful-run timestamp. `status` reads local state without HTTP or loading settings. Malformed/naive cooldown records are treated as due.
+
+The OS file lock in `state/job.lock` serializes Python report/run processes and releases on process exit; the lock file stays on disk. Manual contention returns code 2; a scheduled contention is a successful skip. JSONL event history retains at most 500 entries; `current-job.json` records progress. A crash can leave a last-recorded running event; it is not proof a process is still active.
 
 The registration script uses an interactive-token account, least privilege, idle/AC conditions, stop/restart on idle changes, no waking, and a 15-minute execution limit. Ignore-new prevents overlapping scheduled instances only. Its create-or-update call can replace a task named `Nyx`; inspect it and obtain approval before replacement.
 
@@ -55,8 +60,8 @@ The registration script uses an interactive-token account, least privilege, idle
 3. Each HTTP GET uses Subsonic token-and-salt authentication. The protocol's MD5 construction is for API compatibility, not password storage. Network errors omit authenticated request URLs.
 4. Collection calls `ping`, `getScanStatus`, `getArtists`, and `getPlaylists`.
 5. `getAlbumList2` pages through albums; sequential `getAlbum` requests fetch their tracks. Reaching the album safety limit aborts instead of saving a deliberately truncated snapshot.
-6. Pure summary/render functions compare metadata with the previous snapshot and produce Markdown.
-7. The reporter replaces the dated report, then `Latest.md`, then the library snapshot.
+6. Pure summary/render functions compare metadata with the previous snapshot and produce Markdown. Progress callbacks expose phase/counts without titles or authenticated URLs.
+7. The reporter replaces the dated report, `Navidrome report - latest.md`, the saved aggregate summary, then the library snapshot.
 8. The runner writes `last-run.json` only after the reporter returns successfully.
 
 The client is internally generic, but the current reporting flow calls only read endpoints. It never starts scans, edits playlists, downloads audio, or changes tags.
@@ -71,13 +76,17 @@ The client is internally generic, but the current reporting flow calls only read
 | `reports/Navidrome/*.md` | Latest and dated reports | Ignored |
 | `state/navidrome-last.json` | Previous successful library metadata | Ignored |
 | `state/last-run.json` | Success time, status, module, local report path | Ignored |
-| `logs/` | Reserved output directory; no logging subsystem yet | Contents ignored |
+| `logs/nyx.log` | Redacted JSON events; 256 KiB rotation with two backups | Ignored |
+| `state/navidrome-summary.json` | Compact latest statistics/diagnostics | Ignored |
+| `state/history.jsonl` | Last 500 execution events | Ignored |
+| `state/current-job.json` | Last recorded job phase/status | Ignored |
+| `state/job.lock` | OS-managed report/run exclusion | Ignored |
 
 An optional `NYX_REPORT_DIR` moves report output, not state. Filenames use the host's local date; timestamps use UTC. Same-day runs replace the dated report.
 
-The accepted future filename prefix is **`Navidrome report`**. It is not yet implemented: `run_report` currently writes `Navidrome/YYYY-MM-DD.md` and `Navidrome/Latest.md`. The planned names are `Navidrome report YYYY-MM-DD.md` and `Navidrome report Latest.md` within the same output directory. Implement this as a separate, tested change; preserve existing files and snapshots, update returned/recorded paths and user documentation, and never rename or delete private historical reports during repository preparation.
+The implemented names are `Navidrome/Navidrome report - YYYY-MM-DD.md` and `Navidrome/Navidrome report - latest.md`, matching the owner's prefix and separator. Legacy date-only/`Latest.md` files are left untouched. JSON snapshots continue; returned paths and last-run records use the new dated name.
 
-`atomic_write` writes a sibling `.tmp` file and uses `os.replace`. This protects one file replacement, not a multi-file transaction. Report files can advance before a later write fails. Fixed temporary names create concurrent-writer risks; cancellation can leave temporary files. Only one previous snapshot is retained.
+`atomic_write` creates a unique sibling temporary file, closes it before `os.replace` for Windows compatibility, and cleans up its own temporary file on ordinary failure. This protects individual replacement, not a multi-file transaction. Report/summary files can advance before a later write fails; abrupt process termination can leave a temporary file. Only one previous library snapshot is retained.
 
 Snapshots can contain library paths, artists, titles, and playlist metadata. Treat them and reports as private even without credentials. Do not publish starter archives or use real snapshots as fixtures.
 
@@ -85,14 +94,13 @@ Snapshots can contain library paths, artists, titles, and playlist metadata. Tre
 
 - Rust is a launcher, not the planned controller. Native idle detection, priorities, modular scheduling/cancellation, and the TUI are absent.
 - Rust compilation and Task Scheduler behavior were not verified during repository preparation because the Rust toolchain was unavailable.
-- The time-budget check covers per-album retrieval, not initial calls or album pagination; an in-flight request can overrun it.
-- Configuration has no schema checks. Invalid types/ranges, malformed API response shapes, and some malformed state can raise errors. Settings load before the runner's reporting exception handler.
-- Cooldown parsing tolerates missing/invalid JSON and some missing fields, but not every data shape or naive timestamp.
+- Collection checks a deadline before/after every API call, including initial calls/pagination, and caps connect/read timeouts to the remaining budget. This is cooperative; socket activity/read-timeout semantics and cancellation still require native lifecycle enforcement.
+- Known settings are type/range validated. The client validates its response envelope, HTTPS URL, and read-endpoint allowlist; some nested malformed library payloads still need stricter checks. Untrusted server error messages are not echoed.
 - Library metadata stays in memory. No streaming aggregation or memory cap exists.
-- Manual and scheduled invocations have no application-wide lock. Output writes are not one transaction.
+- The Python job lock prevents concurrent report/run writers; output writes are still not one transaction.
 - A personal-server fallback remains in `run_report` to preserve starter behavior. New installations must explicitly configure their server.
 - Python dependencies are not locked. Rust has no unit tests. Offline tests cover a subset of failure modes.
-- The installer does not explicitly propagate every native-command failure; confirm pip succeeded. Task registration can overwrite an existing task.
+- The installer now stops on venv/pip failure. Task registration can still overwrite an existing task; no unattended behavior was activated.
 
 ## Planned responsibilities
 
@@ -104,6 +112,8 @@ Repository maintenance, local music/FL Studio analysis, research, backups, syste
 
 ## Validation and documentation maintenance
 
-The repository-preparation baseline has 15 passing offline Python tests and a successful dependency consistency check. The three PowerShell helpers passed syntax parsing; this does not verify installation or scheduling behavior. Rust compilation and Windows idle/AC lifecycle validation remain pending. No fresh live report was run to establish this context.
+There are 31 passing offline Python tests, including configuration failures, Windows OS locking, atomic-write failure, naming, error redaction, initial-call time budgets, and historical-secret detection. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
+
+Public repository: `https://github.com/vxsp/nyx`, branch `main`, remote `origin`. Initial publication was verified by comparing all 26 remote file paths/blob hashes with the published local tree. Every push requires a redacted candidate/history audit.
 
 Keep this description aligned with source changes, update milestone state in `ROADMAP.md`, and carry durable decisions into `AGENTS.md` in the same change. Recheck implementation before promoting any planned capability to completed. Unrelated ChatGPT conversations need repository access or these documents supplied explicitly to recover the context.

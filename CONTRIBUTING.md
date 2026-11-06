@@ -40,7 +40,7 @@ Before committing or publishing:
 
 1. Review `git status --short`, the diff, and `git diff --cached --name-only`.
 2. Verify ignored paths with `git check-ignore -v config/.env .venv reports/Navidrome/Latest.md state/navidrome-last.json Nyx_Starter_v0.1.zip`.
-3. Scan working files, staged content, archives, and reachable Git history with a trusted scanner or a redacted local audit. Pattern scans have false positives and cannot prove absence of secrets. Never echo matched values.
+3. Run `.venv\Scripts\python.exe scripts/check-secrets.py` to audit publication candidates, the index, and reachable history. Archives/media must remain excluded. Supplement this conservative pattern/known-value audit with review or a trusted scanner; it cannot prove absence of arbitrary secrets. Never echo matched values.
 4. Inspect staged content for private data. Ignore rules do not remove already tracked files or historical secrets.
 5. Ignored, untracked local credentials are explicitly permitted. If a credential is exposed in tracked history or material intended for publication, stop publication and tell the owner its location/category only. Do not silently rotate credentials, delete files, or rewrite history; obtain direction before continuing.
 

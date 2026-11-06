@@ -25,14 +25,14 @@ The initial Navidrome reporter already works. The owner supplied this first-repo
 - Rust owns the future background engine and performance-sensitive operations; Python owns API integrations, analysis, and reports. The current Rust launcher is only the first step toward that engine.
 - Keep resource use low and dependencies minimal. Do not add unnecessary resident services.
 - Music operations are read-only by default, both for Navidrome and future local/FL Studio work. Moving, renaming, retagging, deleting, or deduplicating files requires explicit scope and approval for destructive actions.
-- Use `Navidrome report - YYYY-MM-DD.md` and `Navidrome report - latest.md` for the authorized naming change. Until implemented, existing date-only and `Latest.md` names remain current behavior.
+- The reporter writes `Navidrome report - YYYY-MM-DD.md` and `Navidrome report - latest.md`. Preserve historical date-only/`Latest.md` files; do not rename or remove them automatically.
 - Build a visual terminal interface using Python Textual initially; keep it separate from the engine and read saved state without scanning on startup.
 - Preserve working code, private configuration, reports, and snapshots. Work through authorized milestones in verified increments rather than rebuilding the starter.
 
 ## Runtime boundaries
 
 - `src/main.rs` is currently a one-shot launcher, not a resident controller. It needs the project root as its working directory. Task Scheduler owns idle detection.
-- `main.py` loads `config/.env`, applies gates for `run`, and dispatches the reporter. Manual `report` bypasses enabled/cooldown/resource gates. `status` reads local state.
+- `main.py` loads `config/.env`, validates settings, applies gates for `run`, and dispatches the reporter under an OS file lock. Manual `report` bypasses enabled/cooldown/resource gates but respects the lock. `status` reads local state without loading settings.
 - `jobs/navidrome.py` handles read-only HTTPS collection, diagnostics, snapshot comparison, and reports. Preserve endpoint behavior and credential redaction.
 - Keep Python for integrations/analytics and Rust for coordination/performance-sensitive work. Avoid unnecessary dependencies and services.
 - Use native PowerShell. Account for Windows paths and native-command exit codes. Never require WSL or Docker.
@@ -84,4 +84,4 @@ The owner explicitly approves creating/publishing public `vxsp/nyx`, configuring
 
 The owner has resolved the earlier local-credential publication gate: `config/.env` must stay local, ignored, and untracked; its presence alone is not exposure. Audit complete tracked history and exact publication material before every push. Stop only for exposed credentials or an actual authentication/publication blocker; document it and continue safe independent tasks.
 
-Known gaps: schema validation, complete time-budget coverage, manual-run locking, multi-file transactional output, and the personal-server fallback retained in `run_report`. Refer to `ARCHITECTURE.md` before designing around them.
+Known gaps: unverified Rust/Windows unattended lifecycle, cooperative rather than hard runtime/resource enforcement, cross-file transactional output, and the personal-server fallback retained in `run_report`. Configuration validation, collection-wide budget checks, redacted rotating logs, progress state, bounded event history, and a Python job lock now exist. Run `.venv\Scripts\python.exe scripts/check-secrets.py` before each push.
