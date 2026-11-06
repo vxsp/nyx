@@ -25,6 +25,7 @@ Accepted boundaries are native Windows without WSL/Docker, Rust for the future b
 | `nyx/logging.py` | Rotating redacted JSON logs | No server bodies/raw exceptions |
 | `nyx/saved.py` | Bounded saved-state/report/log reads and cached legacy-snapshot summaries | No network or startup writes |
 | `nyx/tui.py`, `nyx/tui.tcss` | Optional Textual views/navigation and explicit manual CLI subprocess | No resident engine or automatic startup scan |
+| `nyx/themes.py` | Nyx/AMOLED palettes, supported theme choices and bounded preference reads/atomic writes | TUI-only; no new dependency or engine setting |
 | `jobs/navidrome.py` | HTTPS client, collection, diagnostics, comparison, rendering, writes | Read-only integration |
 | `jobs/dev.py` | Configured Git health and opt-in bounded checks | No automatic execution or maintenance in other projects |
 | `jobs/audio.py` | Bounded read-only inventory and optional tag diagnostics | No FLP reference parser, content hashing, or cleanup |
@@ -89,6 +90,7 @@ The client is internally generic, but the current reporting flow calls only read
 | `state/history.jsonl` | Last 500 execution events | Ignored |
 | `state/current-job.json` | Last recorded job phase/status | Ignored |
 | `state/job.lock` | OS-managed report/run exclusion | Ignored |
+| `state/tui-preferences.json` | Explicitly selected dashboard theme | Ignored |
 
 An optional `NYX_REPORT_DIR` moves report output, not state. Filenames use the host's local date; timestamps use UTC. Same-day runs replace the dated report.
 
@@ -118,11 +120,13 @@ The TUI exposes saved overview/statistics, formats/diagnostics, job state/histor
 
 Opening or refreshing the dashboard never starts collection. N explicitly launches the Python `report` command as a hidden Windows subprocess with streamed output. A UI guard and engine OS lock prevent duplicate work. X stops only a process owned by that dashboard; Q waits for completion or explicit cancellation. Other scheduled/background processes are not owned or cancelled by the UI. Events after forced termination can be stale and are labeled as last-recorded state. No additional service is installed.
 
+The toolbar selector and T cycle among Nyx, Textual's bundled Catppuccin Mocha, and custom AMOLED Black. CSS uses theme variables, including widget borders/backgrounds, rather than fixed palette colors. AMOLED main surfaces are pure black with readable accents. Only explicit supported theme changes atomically save `state/tui-preferences.json`; startup reads at most 4 KiB and never creates/rewrites state. Invalid/unavailable preferences fall back to Nyx; save errors notify without undoing the in-session selection. Preferences are separate from engine settings and library snapshots. Built-in theme registration follows the [Textual theme API](https://textual.textualize.io/guide/design/).
+
 An initial Nyx Dev health reporter is implemented; automatic maintenance is not. Read-only Audio inventory and optional tag diagnostics are implemented; FLP reference/unused-sample analysis remains planned. Backups/PC maintenance (H) were scrapped by the owner; no module or tool is retained. Initial historical Insights is implemented using observed saved data only. Research has an initial explicitly invoked digest implementation. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
 
 ## Validation and documentation maintenance
 
-There are 72 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
+There are 74 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation/themes, and real Windows synthetic child execution/cancellation. UI startup/refresh/theme tests forbid network/process launches; theme tests verify pure black main surfaces, persisted selection, read-only restart, snapshot preservation, corrupt preferences, and save failure recovery. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for the theme changes.
 
 Public repository: `https://github.com/vxsp/nyx`, branch `main`, remote `origin`. Initial publication was verified by comparing all 26 remote file paths/blob hashes with the published local tree. Every push requires a redacted candidate/history audit.
 

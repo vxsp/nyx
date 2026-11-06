@@ -76,3 +76,10 @@
 - Verified the prefixed dated/latest reports, full snapshot, compact summary, success state, and matching successful real job measurement. Existing legacy reports retained identical hashes. Private credentials, reports, state, measurements, and logs remain ignored by Git; detailed results were neither printed nor added to documentation.
 - The dashboard loaded the new saved data with network calls forbidden. Fresh-terminal appearance and dashboard-triggered live child integration still need separate validation; no performance improvement or multi-run trend is inferred from one run.
 - Documentation-only follow-up: clarified the explicit manual-validation boundary in `AGENTS.md` and updated architecture/roadmap status. The retained code suite previously passed 72 offline tests; source code is unchanged in this follow-up. Native D remains blocked on Rust/MSVC and H remains scrapped.
+
+## 2026-11-05: selectable dashboard themes
+
+- Added Nyx, bundled Catppuccin Mocha, and AMOLED Black via a toolbar selector and T cycling. Replaced fixed dashboard colors with theme variables; AMOLED main backgrounds/panels/cards are pure black. No dependency was added.
+- Explicit changes atomically save only the supported theme name in ignored `state/tui-preferences.json`. Startup/refresh remain read-only; corrupt/unavailable preferences fall back to Nyx. Save errors leave the session's selection usable and show a safe notification.
+- Validation: all 74 offline tests passed, including dropdown/keyboard switching, rendered main-surface colors, remembered choice, restart without writes, unchanged synthetic snapshot, no network/process launches, and recovery from corrupt/read-only state. Dependency consistency and Python 3.10 syntax checks passed. Tests used temporary synthetic data; no live integration was run for this change.
+- Updated persistent context and user instructions. Next milestone remains native Rust/MSVC setup and then D's Windows idle/cancellation lifecycle; H remains scrapped and unattended activation remains disabled.

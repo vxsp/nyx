@@ -1,24 +1,26 @@
-Screen { background: #0c1222; color: #d8e0f0; }
-Header { background: #17213a; color: #bcb2ff; }
-Footer { background: #17213a; }
-#mode { height: 2; padding: 0 2; color: #83c9bb; background: #101b30; }
+Screen { background: $background; color: $foreground; }
+Header { background: $panel; color: $primary; }
+Footer { background: $footer-background; }
+#toolbar { height: 3; background: $panel; }
+#mode { width: 1fr; height: 3; padding: 0 2; content-align: left middle; color: $secondary; }
+#theme-select { width: 28; margin-right: 2; }
 TabbedContent { height: 1fr; }
 TabPane { padding: 1 2; }
-Tabs { background: #101b30; }
-.section { height: 2; color: #a89cf5; text-style: bold; margin-top: 1; }
+Tabs { background: $panel; }
+.section { height: 2; color: $primary; text-style: bold; margin-top: 1; }
 #metrics { height: 7; }
-.metric { width: 1fr; height: 6; margin: 0 1 0 0; border: round #35446c; background: #15203a; content-align: center middle; text-style: bold; color: #bed5ff; }
-#capture { height: auto; margin-bottom: 1; color: #96aacb; }
-.panel { height: auto; min-height: 5; border: round #35446c; padding: 1 2; background: #101b30; }
-#notices { height: auto; margin-top: 1; color: #d4b87c; }
+.metric { width: 1fr; height: 6; margin: 0 1 0 0; border: round $border; background: $surface; content-align: center middle; text-style: bold; color: $accent; }
+#capture { height: auto; margin-bottom: 1; color: $foreground-muted; }
+.panel { height: auto; min-height: 5; border: round $border; padding: 1 2; background: $panel; }
+#notices { height: auto; margin-top: 1; color: $warning; }
 .actions { height: 3; margin-top: 1; }
 .actions Button { margin-right: 2; }
-.hint { height: auto; margin: 1 0; color: #96aacb; }
+.hint { height: auto; margin: 1 0; color: $foreground-muted; }
 #formats { height: 10; }
 #diagnostics { height: 12; }
 #history { height: 1fr; min-height: 5; }
-#job-output { height: 8; border: round #35446c; }
+#job-output { height: 8; border: round $border; }
 #report-list { height: 8; }
-#report-preview { height: 1fr; border: round #35446c; padding: 0 1; }
-#error-log { height: 1fr; border: round #35446c; }
-#insights-preview { height: 1fr; border: round #35446c; padding: 0 1; }
+#report-preview { height: 1fr; border: round $border; padding: 0 1; }
+#error-log { height: 1fr; border: round $border; }
+#insights-preview { height: 1fr; border: round $border; padding: 0 1; }

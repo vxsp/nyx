@@ -27,6 +27,7 @@ The initial Navidrome reporter already works. The owner supplied this first-repo
 - Music operations are read-only by default, both for Navidrome and future local/FL Studio work. Moving, renaming, retagging, deleting, or deduplicating files requires explicit scope and approval for destructive actions.
 - The reporter writes `Navidrome report - YYYY-MM-DD.md` and `Navidrome report - latest.md`. Preserve historical date-only/`Latest.md` files; do not rename or remove them automatically.
 - The initial Python Textual dashboard is implemented (`main.py tui`, optional `requirements-tui.txt`). Keep it separate from the engine; startup/refresh read saved data only. Manual N starts a locked CLI subprocess; X cancels only its owned process, and Q is guarded while that job runs.
+- Dashboard themes are Nyx, Catppuccin Mocha, and AMOLED Black, selected in the toolbar or with T. Keep styles theme-driven. Only explicit theme changes write ignored `state/tui-preferences.json`; startup/refresh remain read-only. Preserve pure black main surfaces for AMOLED and tolerate unavailable/corrupt preferences or save failures.
 - Preserve working code, private configuration, reports, and snapshots. Work through authorized milestones in verified increments rather than rebuilding the starter.
 
 ## Runtime boundaries

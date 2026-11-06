@@ -12,11 +12,12 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, VerticalScroll
-from textual.widgets import Button, DataTable, Footer, Header, Log, Markdown, Static, TabbedContent, TabPane
+from textual.widgets import Button, DataTable, Footer, Header, Log, Markdown, Select, Static, TabbedContent, TabPane
 
 from nyx.logging import redact
 from nyx.runtime import JobBusyError, job_lock, record_event
 from nyx.saved import DashboardStore
+from nyx.themes import AMOLED_THEME, NYX_THEME, THEME_CHOICES, THEME_NAMES, load_theme, save_theme
 
 
 def metric(value: object) -> str:
@@ -38,12 +39,17 @@ class NyxApp(App):
         Binding("5", "tab('errors')", "Errors", show=False),
         Binding("6", "tab('insights')", "Insights", show=False),
         Binding("i", "insights_report", "Local insights"),
+        Binding("t", "cycle_theme", "Theme"),
         Binding("q", "quit", "Quit", priority=True),
     ]
 
     def __init__(self, root: Path):
         super().__init__()
         self.root = root.resolve()
+        self._theme_ready = False
+        self.register_theme(NYX_THEME)
+        self.register_theme(AMOLED_THEME)
+        self.theme = load_theme(self.root)
         self.store = DashboardStore(self.root)
         self.running_report = False
         self.process: asyncio.subprocess.Process | None = None
@@ -54,7 +60,10 @@ class NyxApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Static("SAVED STATE  /  No scan on startup  /  Native Windows", id="mode")
+        with Horizontal(id="toolbar"):
+            yield Static("SAVED STATE  /  No scan on startup  /  Native Windows", id="mode")
+            yield Select(THEME_CHOICES, value=self.theme, allow_blank=False, id="theme-select",
+                         tooltip="Theme / press T to cycle; saved locally")
         with TabbedContent(initial="overview", id="workspace"):
             with TabPane("1 Overview", id="overview"):
                 with VerticalScroll():
@@ -103,6 +112,26 @@ class NyxApp(App):
         self.query_one("#history", DataTable).add_columns("UTC", "Module", "Status", "Phase / detail")
         self.query_one("#report-list", DataTable).add_columns("Saved report")
         self.action_refresh_saved()
+        self._theme_ready = True
+
+    @on(Select.Changed, "#theme-select")
+    def select_theme(self, event: Select.Changed) -> None:
+        if event.value in THEME_NAMES and event.value != self.theme:
+            self.theme = event.value
+
+    def action_cycle_theme(self) -> None:
+        index = THEME_NAMES.index(self.theme) if self.theme in THEME_NAMES else -1
+        self.theme = THEME_NAMES[(index + 1) % len(THEME_NAMES)]
+
+    def watch_theme(self, name: str) -> None:
+        # Textual applies its own theme watcher; this public watcher handles our preference.
+        if not getattr(self, "_theme_ready", False) or name not in THEME_NAMES:
+            return
+        self.query_one("#theme-select", Select).value = name
+        try:
+            save_theme(self.root, name)
+        except OSError:
+            self.notify("Theme applied for this session; the preference could not be saved.", severity="warning")
 
     def action_tab(self, tab: str) -> None:
         self.query_one("#workspace", TabbedContent).active = tab

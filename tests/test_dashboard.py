@@ -10,7 +10,7 @@ from nyx.saved import DashboardStore
 
 try:
     from nyx.tui import NyxApp
-    from textual.widgets import DataTable, Static, TabbedContent
+    from textual.widgets import DataTable, Footer, Header, Select, Static, TabbedContent
 except ImportError:
     NyxApp = None
 
@@ -95,6 +95,68 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
                     launch.assert_not_called()
                     network.assert_not_called()
             self.assertEqual(sorted(p.name for p in root.iterdir()), ["state"])
+
+    async def test_theme_switches_preserve_data_and_restore_without_work(self):
+        with TemporaryDirectory() as folder:
+            root = Path(folder)
+            state = root / "state"
+            state.mkdir()
+            snapshot = state / "navidrome-summary.json"
+            snapshot.write_text('{"tracks":9}', encoding="utf-8")
+            original = snapshot.read_bytes()
+            preference = state / "tui-preferences.json"
+            with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as launch, \
+                    patch("requests.sessions.Session.request", side_effect=AssertionError("No network")) as network:
+                app = NyxApp(root)
+                async with app.run_test(size=(120, 40)) as pilot:
+                    await pilot.pause()
+                    self.assertEqual(app.theme, "nyx-dark")
+                    self.assertFalse(preference.exists())
+                    await pilot.press("t")
+                    self.assertEqual(app.theme, "catppuccin-mocha")
+                    self.assertEqual(app.screen.styles.background.hex, "#181825")
+                    await pilot.press("t")
+                    await pilot.pause()
+                    self.assertEqual(app.theme, "amoled-black")
+                    for widget in (app.screen, app.query_one(Header), app.query_one(Footer),
+                                   app.query_one("#tracks", Static), app.query_one("#overview-detail", Static)):
+                        self.assertEqual(widget.styles.background.hex, "#000000")
+                    self.assertEqual(app.query_one("#theme-select", Select).value, "amoled-black")
+                    self.assertEqual(json.loads(preference.read_text())["theme"], "amoled-black")
+                saved_preference = preference.read_bytes()
+                saved_mtime = preference.stat().st_mtime_ns
+                restored = NyxApp(root)
+                async with restored.run_test(size=(100, 32)) as pilot:
+                    await pilot.press("r", "2", "4")
+                    self.assertEqual(restored.theme, "amoled-black")
+                    self.assertEqual(restored.query_one("#theme-select", Select).value, "amoled-black")
+                launch.assert_not_called()
+                network.assert_not_called()
+            self.assertEqual(preference.read_bytes(), saved_preference)
+            self.assertEqual(preference.stat().st_mtime_ns, saved_mtime)
+            self.assertEqual(snapshot.read_bytes(), original)
+            self.assertEqual(sorted(path.name for path in state.iterdir()),
+                             ["navidrome-summary.json", "tui-preferences.json"])
+
+    async def test_theme_selector_survives_corrupt_state_and_save_failure(self):
+        with TemporaryDirectory() as folder:
+            root = Path(folder)
+            preference = root / "state" / "tui-preferences.json"
+            preference.parent.mkdir()
+            preference.write_text("not-json", encoding="utf-8")
+            app = NyxApp(root)
+            with patch("nyx.tui.save_theme", side_effect=PermissionError("Synthetic read-only state")) as save:
+                async with app.run_test(size=(100, 32)) as pilot:
+                    self.assertEqual(app.theme, "nyx-dark")
+                    save.assert_not_called()
+                    await pilot.click("#theme-select")
+                    await pilot.press("home", "down", "enter")
+                    await pilot.pause()
+                    self.assertEqual(app.theme, "catppuccin-mocha")
+                    save.assert_called_once_with(root, "catppuccin-mocha")
+                    await pilot.press("r", "2")
+                    self.assertEqual(app.query_one("#workspace", TabbedContent).active, "library")
+            self.assertEqual(preference.read_text(), "not-json")
 
     async def test_manual_execution_uses_real_child_and_blocks_duplicates(self):
         with TemporaryDirectory() as folder:

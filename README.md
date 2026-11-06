@@ -166,17 +166,20 @@ Install the optional interface and open it from the project root:
 
 The dashboard reads saved statistics/snapshots, diagnostics, job history, reports, and redacted error logs. It supports the original saved snapshot and report names; a new scan is not required just to open it. No extra service is installed.
 
+Choose **Nyx**, **Catppuccin Mocha**, or **AMOLED Black** in the theme selector at the top, or press **T** to cycle. AMOLED uses pure black for the main background, panels, and cards. Your selection is saved locally in ignored `state/tui-preferences.json` and restored next time. Opening/refreshing the dashboard does not write preferences; unavailable/corrupt preferences fall back to Nyx. If saving fails, the selected theme still works for the current session. No additional dependency is needed.
+
 | Key | Action |
 | --- | --- |
 | 1-6 | Overview, library, jobs/history, reports, errors, Insights |
 | R | Reload saved files only |
+| T | Cycle Nyx, Catppuccin Mocha, AMOLED Black; remember the selection locally |
 | I | Explicitly generate local Insights from saved state; no network |
 | N | Explicit manual report (bypasses admission checks; holds job lock) |
 | X | Cancel only the dashboard-owned manual process |
 | Q | Quit; guarded while an owned report runs |
 | Tab / arrows / Enter | Navigate controls and select reports |
 
-Manual job output streams into the Jobs tab. Existing scheduled jobs are independent; the dashboard cannot cancel them. Saved running state may be stale after a crash. The report browser includes legacy files and disables automatic link opening. Fresh-machine terminal appearance and a new live Navidrome run remain manual integration checks.
+Manual job output streams into the Jobs tab. Existing scheduled jobs are independent; the dashboard cannot cancel them. Saved running state may be stale after a crash. The report browser includes legacy files and disables automatic link opening. One owner-approved manual live CLI report passed on 2026-11-05; fresh-machine terminal appearance and dashboard-triggered live child integration remain separate checks.
 
 ![Nyx dashboard preview with synthetic demo data](docs/assets/dashboard.svg)
 
