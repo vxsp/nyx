@@ -61,3 +61,11 @@
 
 - Final security review strengthened the pre-push audit for retired config credentials and historical private paths that share a blob with another filename. Regression tests cover both cases; the full retained suite has 72 passing tests and the complete reachable-history/publication audit has no findings.
 - Native Rust prerequisite work is tracked in [issue #1](https://github.com/vxsp/nyx/issues/1). The GitHub connector returned an issue-write permission error; the existing authorized native owner login created the issue successfully without exposing credentials.
+
+## 2026-11-05: published session checkpoint
+
+- Code checkpoint `7f98f67` is pushed to public `vxsp/nyx`, `main`, with all prior commits preserved. Initial B/C/E/F/G/I implementations and the owner-scrapped H decision are documented; no backup prototype/tool remains.
+- Final retained validation: 72 passing tests, consistent installed dependencies, Python 3.10 syntax checks, PowerShell syntax checks, and a clean redacted publication/history audit. Ordinary Git status/log also work under the owning Windows account without the temporary sandbox trust override.
+- A proposed manual read-only Navidrome validation was blocked before execution by automatic approval review, citing `AGENTS.md`'s prohibition on live reports as tests. No request was sent; the owner was asked for explicit approval. Live integration remains unverified unless that approval and successful check are recorded later.
+- The native local Insights smoke check used existing state only, blocked HTTP, and preserved original Navidrome snapshot/cooldown hashes. Generated reports, logs, credentials, and measurements remain local and excluded from Git.
+- Remaining work: Rust/MSVC prerequisite and D lifecycle, manual terminal/live integration, hard process containment, advanced FLP references, and enough real samples for multi-run trends. Unattended behavior remains disabled. This is a checkpoint, not a claim of background work after the session ends.
