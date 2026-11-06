@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sys
+import time
 
 from dotenv import load_dotenv
 import psutil
@@ -13,6 +14,7 @@ from jobs.navidrome import NavidromeError, atomic_write, run_report
 from jobs.dev import run_dev_report
 from jobs.audio import run_audio_report
 from jobs.research import mark_read, run_research_report
+from jobs.insights import record_measurement, run_insights_report
 from nyx.config import ConfigurationError, load_settings
 from nyx.logging import configure_logging
 from nyx.runtime import JobBusyError, job_lock, record_event, record_progress
@@ -60,7 +62,7 @@ def due(config: dict) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Nyx personal background automation runner")
-    parser.add_argument("command", choices=["report", "run", "status", "tui", "dev-report", "audio-report", "research-report", "research-read"], help="Report jobs are opt-in; run=scheduled Navidrome; tui=dashboard")
+    parser.add_argument("command", choices=["report", "run", "status", "tui", "dev-report", "audio-report", "research-report", "research-read", "insights-report"], help="Report jobs are opt-in; run=scheduled Navidrome; tui=dashboard")
     parser.add_argument("--run-checks", action="store_true", help="Explicitly execute declared project checks with dev-report")
     parser.add_argument("--read-tags", action="store_true", help="Read local tags with optional Mutagen (audio-report only)")
     parser.add_argument("--item-id", help="Known research ID prefix (research-read only)")
@@ -71,7 +73,7 @@ def main() -> int:
         parser.error("--read-tags is only supported with audio-report")
     if bool(args.item_id) != (args.command == "research-read"):
         parser.error("research-read requires --item-id; other commands do not accept it")
-    module = {"dev-report": "dev", "audio-report": "audio", "research-report": "research", "research-read": "research"}.get(args.command, "navidrome")
+    module = {"dev-report": "dev", "audio-report": "audio", "research-report": "research", "research-read": "research", "insights-report": "insights"}.get(args.command, "navidrome")
     logger = None
     try:
         if args.command == "tui":
@@ -112,6 +114,25 @@ def main() -> int:
                     return 0
             record_event(ROOT, "running", phase="starting", module=module)
             logger.info("%s report started", module)
+            started = time.monotonic()
+            try:
+                times = psutil.Process().cpu_times()
+                cpu_start = times.user + times.system
+            except psutil.Error:
+                cpu_start = None
+
+            def measure(status: str) -> None:
+                try:
+                    try:
+                        process = psutil.Process()
+                        times = process.cpu_times()
+                        cpu = max(0, times.user + times.system - cpu_start) if cpu_start is not None else None
+                        rss = process.memory_info().rss
+                    except psutil.Error:
+                        cpu, rss = None, None
+                    record_measurement(ROOT, module, status, duration=time.monotonic() - started, cpu_seconds=cpu, rss_bytes=rss)
+                except Exception:
+                    logger.warning("Historical measurement unavailable; report result retained")
 
             def progress(phase: str, completed: int, total: int | None) -> None:
                 record_progress(ROOT, phase, completed, total, module=module)
@@ -125,6 +146,8 @@ def main() -> int:
                     output = run_audio_report(ROOT, config, read_tags=args.read_tags, progress=progress)
                 elif module == "research":
                     output = run_research_report(ROOT, config, progress=progress)
+                elif module == "insights":
+                    output = run_insights_report(ROOT, config, progress=progress)
                 else:
                     output = run_report(ROOT, config, progress=progress)
                 status_path = ROOT / "state" / f"{module}-last-run.json" if module != "navidrome" else last_run_path()
@@ -133,6 +156,7 @@ def main() -> int:
                     "report_path": str(output), "module": module, "status": "success",
                 }, indent=2))
                 record_event(ROOT, "success", report_path=str(output), module=module)
+                measure("success")
                 logger.info("%s report completed", module)
                 print(f"Nyx report written: {output}")
                 return 0
@@ -141,6 +165,7 @@ def main() -> int:
                     record_event(ROOT, "failed", error_type=type(exc).__name__, module=module)
                 except OSError:
                     pass
+                measure("failed")
                 raise
     except JobBusyError as exc:
         print(str(exc), file=sys.stderr)

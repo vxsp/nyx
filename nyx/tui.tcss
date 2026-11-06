@@ -21,3 +21,4 @@ Tabs { background: #101b30; }
 #report-list { height: 8; }
 #report-preview { height: 1fr; border: round #35446c; padding: 0 1; }
 #error-log { height: 1fr; border: round #35446c; }
+#insights-preview { height: 1fr; border: round #35446c; padding: 0 1; }

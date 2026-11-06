@@ -36,6 +36,8 @@ class NyxApp(App):
         Binding("3", "tab('jobs')", "Jobs", show=False),
         Binding("4", "tab('reports')", "Reports", show=False),
         Binding("5", "tab('errors')", "Errors", show=False),
+        Binding("6", "tab('insights')", "Insights", show=False),
+        Binding("i", "insights_report", "Local insights"),
         Binding("q", "quit", "Quit", priority=True),
     ]
 
@@ -46,6 +48,7 @@ class NyxApp(App):
         self.running_report = False
         self.process: asyncio.subprocess.Process | None = None
         self._cancel_requested = False
+        self._owned_command = "report"
         self._selected_report: Path | None = None
         self.saved = None
 
@@ -87,6 +90,11 @@ class NyxApp(App):
             with TabPane("5 Errors", id="errors"):
                 yield Static("WARNINGS & ERRORS / PRIVATE ROTATING LOG", classes="section")
                 yield Log(id="error-log", max_lines=500, highlight=False)
+            with TabPane("6 Insights", id="insights"):
+                yield Button("Generate local insights [I]", id="run-insights", variant="primary")
+                yield Static("Reads existing state/history only. No Navidrome or research fetch. Missing history stays unavailable.", classes="hint")
+                with VerticalScroll(id="insights-preview"):
+                    yield Markdown("# No saved insights\n\nPress I to generate a local history report.", id="insights-body", open_links=False)
         yield Footer()
 
     def on_mount(self) -> None:
@@ -156,6 +164,10 @@ class NyxApp(App):
         errors = self.query_one("#error-log", Log)
         errors.clear()
         errors.write_lines(self.saved.errors or ["No saved warnings or errors."])
+        insight_path = self.store.report_dir / "Insights" / "Nyx Insights report - latest.md"
+        self.query_one("#insights-body", Markdown).update(
+            self.store.read_report(insight_path) if insight_path.is_file() else "# No saved insights\n\nPress I to generate a local history report."
+        )
 
     @on(DataTable.RowSelected, "#report-list")
     def select_report(self, event: DataTable.RowSelected) -> None:
@@ -174,10 +186,18 @@ class NyxApp(App):
         self.action_run_report()
 
     def action_run_report(self) -> None:
+        self.start_job("report")
+
+    @on(Button.Pressed, "#run-insights")
+    def action_insights_report(self) -> None:
+        self.start_job("insights-report")
+
+    def start_job(self, command: str) -> None:
         if self.running_report:
             self.notify("This dashboard already owns a running report.", severity="warning")
             return
         self.running_report = True
+        self._owned_command = command
         self._cancel_requested = False
         self.query_one("#run-report", Button).disabled = True
         self.action_tab("jobs")
@@ -190,7 +210,7 @@ class NyxApp(App):
         try:
             flags = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
             self.process = await asyncio.create_subprocess_exec(
-                sys.executable, str(self.root / "main.py"), "report", cwd=self.root,
+                sys.executable, str(self.root / "main.py"), self._owned_command, cwd=self.root,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, **flags,
             )
             if self._cancel_requested:
@@ -227,7 +247,8 @@ class NyxApp(App):
                 await process.wait()
             try:
                 with job_lock(self.root):
-                    record_event(self.root, "interrupted", reason="Dashboard-owned process stopped")
+                    record_event(self.root, "interrupted", reason="Dashboard-owned process stopped",
+                                 module="insights" if self._owned_command == "insights-report" else "navidrome")
             except (JobBusyError, OSError):
                 pass
         except ProcessLookupError:

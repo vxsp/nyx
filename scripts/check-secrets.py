@@ -6,6 +6,7 @@ that arbitrary secrets are absent. Ignored local credentials are permitted.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -18,6 +19,34 @@ PATTERNS = {
     "provider token": rb"(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{30,}|(?:AKIA|ASIA)[A-Z0-9]{16}|sk-[A-Za-z0-9_-]{32,}|xox[baprs]-[A-Za-z0-9-]{20,})",
     "credential URL": rb"https?://[^\s/:]+:[^\s/@]+@",
 }
+
+
+def credential_assignments(path: str, data: bytes) -> bool:
+    """Catch non-placeholder config credentials, including retired passwords."""
+    sensitive = re.compile(r"PASSWORD|TOKEN|SECRET|API_KEY|AUTHORIZATION", re.I)
+    def literal(value):
+        if not isinstance(value, str):
+            return False
+        value = value.strip().strip("\"'")
+        return bool(value) and not value.casefold().startswith(("your_", "replace_", "example", "synthetic", "test-", "<", "$"))
+    if Path(path).suffix.lower() == ".json":
+        try:
+            document = json.loads(data)
+        except (ValueError, UnicodeError):
+            return False
+        def walk(value):
+            if isinstance(value, dict):
+                return any((sensitive.search(str(key)) and literal(item)) or walk(item) for key, item in value.items())
+            return isinstance(value, list) and any(walk(item) for item in value)
+        return bool(walk(document))
+    if Path(path).name.startswith(".env") or Path(path).suffix.lower() in (".yml", ".yaml"):
+        for line in data.decode("utf-8", errors="replace").splitlines():
+            if line.lstrip().startswith("#"):
+                continue
+            match = re.match(r"\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*[=:]\s*(.*)", line)
+            if match and sensitive.search(match[1]) and literal(match[2]):
+                return True
+    return False
 
 
 def private_path(path: str) -> bool:
@@ -46,6 +75,8 @@ def audit(root: Path) -> tuple[list[str], int]:
         count += 1
         if private_path(path):
             findings.add(label + ": private/generated path")
+        if credential_assignments(path, data):
+            findings.add(label + ": non-placeholder credential configuration (value withheld)")
         if any(value in data for value in values):
             findings.add(label + ": matches a local credential (value withheld)")
         for category, pattern in PATTERNS.items():
@@ -65,10 +96,26 @@ def audit(root: Path) -> tuple[list[str], int]:
         file = root / path
         if file.is_file():
             scan("working:" + path, path, file.read_bytes())
+    # Object names alone are insufficient: one blob can occur at several paths,
+    # and config-specific rules must apply to every historical path alias.
+    aliases: dict[str, set[str]] = {}
+    for commit in git("rev-list", "--all").decode().splitlines():
+        for entry in git("ls-tree", "-r", "-z", commit).decode().strip("\0").split("\0"):
+            if not entry:
+                continue
+            metadata, path = entry.split("\t", 1)
+            _, kind, sha = metadata.split()
+            if kind == "blob":
+                aliases.setdefault(sha, set()).add(path)
+            if path and private_path(path):
+                findings.add("history:" + path + ": private/generated path")
     for item in git("rev-list", "--objects", "--all").decode().splitlines():
         sha, _, path = item.partition(" ")
-        if git("cat-file", "-t", sha).strip() in (b"blob", b"commit"):
-            scan("history:" + (path or sha), path, git("cat-file", "-p", sha))
+        kind = git("cat-file", "-t", sha).strip()
+        if kind in (b"blob", b"commit"):
+            data = git("cat-file", "-p", sha)
+            for alias in aliases.get(sha, {path}):
+                scan("history:" + (alias or sha), alias, data)
     return sorted(findings), count
 
 

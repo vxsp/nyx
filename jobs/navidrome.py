@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
-from hashlib import md5
+from hashlib import md5, sha256
 import html
 import json
 import os
@@ -357,6 +357,7 @@ def run_report(project_dir: Path, settings: dict,
     atomic_write(dated_path, output)
     atomic_write(latest_path, output)
     saved_summary = {
+        "scope_id": sha256(("metrics-v1\0" + cleaned(current.get("server")) + "\0" + os.getenv("NAVIDROME_USERNAME", "")).encode()).hexdigest(),
         "captured_at": current["captured_at"], "duration_seconds": current["duration_seconds"],
         "scan": current["scan"],
         **{key: summary[key] for key in ("tracks", "albums", "artists", "playlists", "formats", "reported_file_bytes", "removed_count", "has_previous")},

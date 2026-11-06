@@ -50,3 +50,14 @@
 - Added canonical article deduplication, cumulative daily categorized digests, bounded seen/reading history, explicit read acknowledgement, source/date provenance and unavailable statuses. Source failures retain history; seen is never counted as read.
 - Hardened Markdown field escaping and disabled Navidrome API redirects to avoid authenticated HTTP downgrade behavior. All requests remain read-only.
 - Validation: 62 offline tests passed; pip consistency passed. Research responses are synthetic; no live feeds or personal data were queried. Periodic monitoring remains disabled. Next: H's backup/maintenance boundary, then evidence-based historical insights.
+
+## 2026-11-05: roadmap cancellation and local Insights checkpoint
+
+- Detected the owner's authoritative roadmap edit scrapping H. Removed only the unpublished backup prototype, example/password additions, tests/installer, and the portable tool installed for it. No backup feature or binary was pushed. Disposable test fixtures were cleaned; no personal source or backup was changed. Re-read the roadmap before each next milestone.
+- Implemented local Insights with honest unavailable states, comparable library/metadata deltas, project-check observations, completed-job outcomes, and bounded actual controller duration/CPU/RSS measurements. Failed jobs do not reuse stale statistics, and telemetry errors cannot fail working reports.
+- Added the sixth TUI tab and explicit I local-report action. R/startup remain read-only; UI command-routing tests prevent accidentally launching Navidrome collection for Insights.
+- Validation: 72 offline tests passed in the retained suite; pip consistency passed. A native local Insights CLI smoke check forbade HTTP and verified original Navidrome snapshot/cooldown hashes unchanged. Preview uses synthetic data only; the actual Insights report stays ignored locally.
+- Checkpoint: B/C/E/F/G/I have verified initial implementations, D remains blocked on Rust/MSVC, H is scrapped. Unattended scheduling remains disabled. Personal integrations, manual terminal UX, containment, FLP references, and measured multi-run trends remain follow-ups; no background work is claimed after the session ends.
+
+- Final security review strengthened the pre-push audit for retired config credentials and historical private paths that share a blob with another filename. Regression tests cover both cases; the full retained suite has 72 passing tests and the complete reachable-history/publication audit has no findings.
+- Native Rust prerequisite work is tracked in [issue #1](https://github.com/vxsp/nyx/issues/1). The GitHub connector returned an issue-write permission error; the existing authorized native owner login created the issue successfully without exposing credentials.

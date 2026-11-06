@@ -100,7 +100,7 @@ class DashboardStore:
                 data.notices.append("An invalid history entry was skipped.")
         try:
             base = self.report_dir
-            candidates = [path for folder in ("Navidrome", "Dev", "Audio", "Research") for path in (base / folder).glob("*.md")
+            candidates = [path for folder in ("Navidrome", "Dev", "Audio", "Research", "Insights") for path in (base / folder).glob("*.md")
                           if path.resolve().is_relative_to(base) and path.is_file()]
             data.reports = sorted(candidates, key=lambda path: path.stat().st_mtime_ns, reverse=True)[:200]
         except (OSError, ValueError):

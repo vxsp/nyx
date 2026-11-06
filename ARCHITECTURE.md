@@ -2,7 +2,7 @@
 
 ## Scope
 
-Nyx 0.1 has Python Navidrome, Dev, Audio, and Research jobs, an optional dashboard, and one Rust launcher. It preserves the working Navidrome reporter and uses Windows Task Scheduler without adding a resident service. Native Windows 11 on an Intel i3-1115G4 laptop with 16 GB RAM is the target; resource efficiency is a goal, not a measured performance guarantee.
+Nyx 0.1 has Python Navidrome, Dev, Audio, Research, and Insights jobs, an optional dashboard, and one Rust launcher. It preserves the working Navidrome reporter and uses Windows Task Scheduler without adding a resident service. Native Windows 11 on an Intel i3-1115G4 laptop with 16 GB RAM is the target; resource efficiency is a goal, not a measured performance guarantee.
 
 ## Persistent product context
 
@@ -27,6 +27,7 @@ Accepted boundaries are native Windows without WSL/Docker, Rust for the future b
 | `jobs/dev.py` | Configured Git health and opt-in bounded checks | No automatic execution or maintenance in other projects |
 | `jobs/audio.py` | Bounded read-only inventory and optional tag diagnostics | No FLP reference parser, content hashing, or cleanup |
 | `jobs/research.py` | Configured RSS/Atom/public-release fetches and private digests | Explicit manual invocation; no unattended monitor |
+| `jobs/insights.py` | Local history, comparable library deltas, outcome/resource observations | Missing history unavailable; no fabricated/backdated telemetry |
 | `config/settings.json` | Versioned resource and collection defaults | Known fields validated before work |
 | `config/.env` | Private server/login/output settings | Local only |
 | `scripts/*.ps1` | Setup, manual invocation, opt-in task registration | Registration modifies Windows state |
@@ -111,15 +112,15 @@ Snapshots can contain library paths, artists, titles, and playlist metadata. Tre
 
 Future Rust work should own lightweight scheduling, Windows state observation, lifecycle/cancellation, and performance-sensitive coordination. Python should own network integrations, analysis, research, and reports. Keep jobs independently callable and testable; agree on configuration, results, and failure contracts before introducing a persistent controller.
 
-The TUI exposes saved overview/statistics, formats/diagnostics, job state/history/output, reports, and errors across five keyboard-accessible tabs. Saved summaries are preferred; legacy snapshots are summarized locally and cached by file signature. Malformed/missing state becomes unavailable data. Navidrome/Dev reports are limited to the configured output tree and 512 KiB previews; links do not open automatically.
+The TUI exposes saved overview/statistics, formats/diagnostics, job state/history/output, reports, and errors across six keyboard-accessible tabs, including local Insights. Saved summaries are preferred; legacy snapshots are summarized locally and cached by file signature. Malformed/missing state becomes unavailable data. Navidrome/Dev reports are limited to the configured output tree and 512 KiB previews; links do not open automatically.
 
 Opening or refreshing the dashboard never starts collection. N explicitly launches the Python `report` command as a hidden Windows subprocess with streamed output. A UI guard and engine OS lock prevent duplicate work. X stops only a process owned by that dashboard; Q waits for completion or explicit cancellation. Other scheduled/background processes are not owned or cancelled by the UI. Events after forced termination can be stale and are labeled as last-recorded state. No additional service is installed.
 
-An initial Nyx Dev health reporter is implemented; automatic maintenance is not. Read-only Audio inventory and optional tag diagnostics are implemented; FLP reference/unused-sample analysis, backups, system maintenance, and historical analytics remain planned. Research has an initial explicitly invoked digest implementation. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
+An initial Nyx Dev health reporter is implemented; automatic maintenance is not. Read-only Audio inventory and optional tag diagnostics are implemented; FLP reference/unused-sample analysis remains planned. Backups/PC maintenance (H) were scrapped by the owner; no module or tool is retained. Initial historical Insights is implemented using observed saved data only. Research has an initial explicitly invoked digest implementation. Validate the current Windows execution lifecycle before expanding jobs. Future file mutation or cleanup requires an explicit safety design and approval for destructive operations.
 
 ## Validation and documentation maintenance
 
-There are 62 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
+There are 72 passing offline Python tests, including configuration failures, Windows OS locking, atomic writes, naming, redaction, budgets, pagination/deduplication, historical-secret detection, headless TUI navigation, and real Windows synthetic child execution/cancellation. UI startup/refresh tests forbid network/process launches. Dependency consistency passes. PowerShell syntax validation does not establish installation or scheduling behavior. Rust/native idle lifecycle validation remains pending; see `docs/WINDOWS_VALIDATION.md`. No fresh live report was run for these changes.
 
 Public repository: `https://github.com/vxsp/nyx`, branch `main`, remote `origin`. Initial publication was verified by comparing all 26 remote file paths/blob hashes with the published local tree. Every push requires a redacted candidate/history audit.
 
@@ -150,3 +151,13 @@ No files are moved, renamed, retagged, hashed, or deleted. FLP internals/sample 
 Article identity hashes canonical URLs (without fragments/UTM tracking) or stable source IDs. Retain at most 5,000 seen IDs and 1,000 reading metadata records. Digests display up to 200 retained items collected that local day, preserving earlier same-day entries across refreshes/failures; source status and newly collected count stay explicit. Failed sources retain previous history/cache; errors expose types only. Publisher dates remain source-provided, not invented UTC measurements.
 
 `research-read --item-id PREFIX` explicitly marks a unique known entry read under the shared job lock. Fetched/seen does not mean read. Markdown fields are escaped and report links are encoded. Reports appear under `reports/Research/`; private state is `state/research-last.json`. No periodic monitoring is enabled until scheduling is implemented and verified. Tests use synthetic responses, never live research sources.
+
+## Local Insights and measured history
+
+`insights-report` reads saved statistics and the last 500 execution events without network access. The dashboard's sixth tab displays its saved report; I explicitly launches the local CLI job, while ordinary startup/R refresh never generate reports or scan servers. Insights-generated events are excluded from its own success-rate denominator; skipped/started events are not completed outcomes.
+
+After other report jobs, best-effort instrumentation records at most 1,000 observations in private `state/insights-history.jsonl`: elapsed job time, Python controller CPU seconds/RSS at completion, outcome, and actual saved module counts. It excludes external test/build child CPU and does not claim peak/system-wide measurements. Invalid/missing telemetry cannot turn an otherwise successful report into failure. Failures do not copy stale successful metrics.
+
+Library growth/metadata deltas require two successful observations with the same hashed server/account/metric-definition scope. Existing snapshots can supply latest saved counts but are never backdated into fictitious telemetry. Project-check observations distinguish passed, failed, unavailable/not-run checks and inaccessible repositories. Retention windows are explicit; rates describe recorded report-job completion, not a whole-system SLA or project-test success guarantee. Backup history is unavailable because H was scrapped.
+
+Private reports/summary live under `reports/Insights/` and `state/insights-summary.json`. A native local CLI smoke check blocked HTTP and verified original Navidrome snapshot/cooldown hashes were unchanged. No live Navidrome scan was run.

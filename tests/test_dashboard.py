@@ -87,7 +87,7 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
                 async with app.run_test(size=(120, 40)) as pilot:
                     await pilot.pause()
                     self.assertIn("9", str(app.query_one("#tracks", Static).render()))
-                    for key, expected in (("2", "library"), ("3", "jobs"), ("4", "reports"), ("5", "errors"), ("1", "overview")):
+                    for key, expected in (("2", "library"), ("3", "jobs"), ("4", "reports"), ("5", "errors"), ("6", "insights"), ("1", "overview")):
                         await pilot.press(key)
                         self.assertEqual(app.query_one("#workspace", TabbedContent).active, expected)
                     await pilot.press("r")
@@ -139,6 +139,26 @@ print("Synthetic collection complete", flush=True)
                 self.assertFalse(app.running_report)
                 state = json.loads((root / "state" / "current-job.json").read_text())
                 self.assertEqual(state["status"], "interrupted")
+
+    async def test_insights_key_launches_only_the_local_insights_command(self):
+        with TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "main.py").write_text('''import pathlib, sys
+root = pathlib.Path(__file__).parent
+(root / "invoked.txt").write_text(sys.argv[1])
+report = root / "reports" / "Insights" / "Nyx Insights report - latest.md"
+report.parent.mkdir(parents=True)
+report.write_text("# Synthetic insights report")
+print("Synthetic local history report complete", flush=True)
+''', encoding="utf-8")
+            app = NyxApp(root)
+            with patch("requests.Session.get", side_effect=AssertionError("No network")):
+                async with app.run_test(size=(120, 40)) as pilot:
+                    await pilot.press("6", "i")
+                    await app.workers.wait_for_complete()
+                    await pilot.pause()
+                    self.assertEqual((root / "invoked.txt").read_text(), "insights-report")
+                    self.assertTrue(any(path.parent.name == "Insights" for path in app.saved.reports))
 
 
 if __name__ == "__main__":

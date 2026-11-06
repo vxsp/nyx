@@ -21,7 +21,8 @@ Version 0.1 implements a Navidrome library reporter, an optional Textual dashboa
 | Configured RSS/Atom and public release digests, seen/read history | Implemented initial Nyx Research; manual only |
 | Automatic repository maintenance and FLP reference/unused-file analysis | Planned |
 | Interactive Textual dashboard reading saved state | Implemented initial version; headless Windows tests passed |
-| Incremental backups, system maintenance, historical analytics | Planned |
+| Local historical Insights and controller measurements | Implemented initial version; missing history stays unavailable |
+| Backups and PC maintenance | Scrapped by the owner; no module installed |
 
 Nyx accesses an existing Navidrome server; it does not install or host one. Current comparison uses the last complete snapshot, not a historical analytics database.
 
@@ -142,6 +143,18 @@ The ID above is a placeholder. Collection fetches bounded RSS/Atom entries and s
 
 Reports stay private under `reports/Research/` and appear in the browser. Source failures preserve retained history; unavailable dates are labeled. No source means an actionable empty report, not automatic web research. Periodic monitoring is not enabled.
 
+## Local historical Insights
+
+```powershell
+.\.venv\Scripts\python.exe main.py insights-report
+```
+
+This reads saved library data, completed-job events, and measured history only. The dashboard's sixth tab shows the report; I generates it explicitly. Missing history stays unavailable. Library growth requires two comparable successful observations for the same server/account/metric definition.
+
+New report jobs record bounded duration, Python-controller CPU seconds/RSS, outcome, and real saved counts. These measurements exclude external test/build child CPU and are not system-wide or peak usage. Telemetry errors do not break working reports. Success rates describe recorded report completion, not a guarantee that every project check passed.
+
+Backups/PC maintenance were scrapped in the owner's roadmap. No backup module or portable tool is retained; backup history is unavailable.
+
 ## Interactive dashboard
 
 Install the optional interface and open it from the project root:
@@ -155,8 +168,9 @@ The dashboard reads saved statistics/snapshots, diagnostics, job history, report
 
 | Key | Action |
 | --- | --- |
-| 1-5 | Overview, library, jobs/history, reports, errors |
+| 1-6 | Overview, library, jobs/history, reports, errors, Insights |
 | R | Reload saved files only |
+| I | Explicitly generate local Insights from saved state; no network |
 | N | Explicit manual report (bypasses admission checks; holds job lock) |
 | X | Cancel only the dashboard-owned manual process |
 | Q | Quit; guarded while an owned report runs |
